@@ -1,26 +1,48 @@
 module Route exposing (Route(..), fromLocation, href, modifyUrl)
 
-import Data.Article as Article
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import String
 import Navigation exposing (Location)
-import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
+import Data.AuthToken exposing (AuthToken(..), extractAccessToken)
+import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string, custom)
 
 
 -- ROUTING --
 
 
 type Route
-    = Home
+    = Home (Maybe AuthToken)
     | Login
+
+
+accessTokenParser : Parser (AuthToken -> a) a
+accessTokenParser =
+    custom "ACCESS_TOKEN" extractToken
+
+
+extractToken : String -> Result String AuthToken
+extractToken hash =
+    case extractAccessToken hash of
+        Just accessToken ->
+            Ok (AuthToken accessToken)
+
+        Nothing ->
+            Err "no access token present"
 
 
 route : Parser (Route -> a) a
 route =
     oneOf
-        [ Url.map Home (s "")
+        [ Url.map tokenToRoute accessTokenParser
+        , Url.map (Home Nothing) (s "")
         , Url.map Login (s "login")
         ]
+
+
+tokenToRoute : AuthToken -> Route
+tokenToRoute token =
+    Home <| Just token
 
 
 
@@ -32,7 +54,7 @@ routeToString page =
     let
         pieces =
             case page of
-                Home ->
+                Home _ ->
                     []
 
                 Login ->
@@ -58,6 +80,6 @@ modifyUrl =
 fromLocation : Location -> Maybe Route
 fromLocation location =
     if String.isEmpty location.hash then
-        Just Home
+        Just (Home Nothing)
     else
         parseHash route location

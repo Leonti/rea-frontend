@@ -174,7 +174,29 @@ setRoute maybeRoute model =
             Nothing ->
                 ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-            Just (Route.Home) ->
+            Just (Route.Home (Just authToken)) ->
+                let
+                    test =
+                        ""
+
+                    session =
+                        model.session
+
+                    updatedSession : Session
+                    updatedSession =
+                        { session
+                            | maybeAuthToken = Just authToken
+                        }
+                in
+                    ( { model
+                        | pageState =
+                            TransitioningFrom (getPage model.pageState)
+                        , session = updatedSession
+                      }
+                    , Task.attempt HomeLoaded (Home.init model.session)
+                    )
+
+            Just (Route.Home Nothing) ->
                 transition HomeLoaded (Home.init model.session)
 
             Just (Route.Login) ->

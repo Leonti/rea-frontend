@@ -5,7 +5,6 @@ module Views.Page exposing (ActivePage(..), bodyId, frame)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Lazy exposing (lazy2)
 import Route exposing (Route)
 import Views.Spinner exposing (spinner)
 
@@ -44,14 +43,14 @@ viewHeader : ActivePage -> Bool -> Html msg
 viewHeader page isLoading =
     nav [ class "navbar navbar-light" ]
         [ div [ class "container" ]
-            [ a [ class "navbar-brand", Route.href Route.Home ]
+            [ a [ class "navbar-brand", Route.href <| Route.Home Nothing ]
                 [ text "conduit" ]
             , ul [ class "nav navbar-nav pull-xs-right" ] <|
                 (viewIf
                     isLoading
                     spinner
                 )
-                    :: [ (navbarLink (page == Home) Route.Home [ text "Home" ]) ]
+                    :: [ (navbarLink (page == Home) (Route.Home Nothing) [ text "Home" ]) ]
             ]
         ]
 
