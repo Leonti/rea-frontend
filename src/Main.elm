@@ -10,6 +10,8 @@ import Page.NotFound as NotFound
 import Route exposing (Route)
 import Task
 import Views.Page as Page exposing (ActivePage)
+import Data.Storage as Storage exposing (Storage)
+import Ports
 
 
 -- WARNING: Based on discussions around how asset management features
@@ -43,10 +45,22 @@ type alias Model =
 
 init : Value -> Location -> ( Model, Cmd Msg )
 init val location =
-    setRoute (Route.fromLocation location)
-        { pageState = Loaded initialPage
-        , session = { maybeAuthToken = Nothing }
-        }
+    let
+        storage =
+            decodeStorageFromJson val
+    in
+        setRoute (Route.fromLocation location)
+            { pageState = Loaded initialPage
+            , session = { maybeAuthToken = Maybe.andThen .token storage }
+            }
+
+
+decodeStorageFromJson : Value -> Maybe Storage
+decodeStorageFromJson json =
+    json
+        |> Decode.decodeValue Decode.string
+        |> Result.toMaybe
+        |> Maybe.andThen (Decode.decodeString Storage.decoder >> Result.toMaybe)
 
 
 initialPage : Page
@@ -176,9 +190,6 @@ setRoute maybeRoute model =
 
             Just (Route.Home (Just authToken)) ->
                 let
-                    test =
-                        ""
-
                     session =
                         model.session
 
@@ -193,7 +204,10 @@ setRoute maybeRoute model =
                             TransitioningFrom (getPage model.pageState)
                         , session = updatedSession
                       }
-                    , Task.attempt HomeLoaded (Home.init model.session)
+                    , Cmd.batch
+                        [ Task.attempt HomeLoaded (Home.init model.session)
+                        , Storage.store { token = Just authToken }
+                        ]
                     )
 
             Just (Route.Home Nothing) ->
