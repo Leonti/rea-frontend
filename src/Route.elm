@@ -14,6 +14,7 @@ import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string, cu
 type Route
     = Home (Maybe AuthToken)
     | Login
+    | Sold
 
 
 accessTokenParser : Parser (AuthToken -> a) a
@@ -37,6 +38,7 @@ route =
         [ Url.map tokenToRoute accessTokenParser
         , Url.map (Home Nothing) (s "")
         , Url.map Login (s "login")
+        , Url.map Sold (s "sold")
         ]
 
 
@@ -59,6 +61,9 @@ routeToString page =
 
                 Login ->
                     [ "login" ]
+
+                Sold ->
+                    [ "sold" ]
     in
         "#/" ++ String.join "/" pieces
 

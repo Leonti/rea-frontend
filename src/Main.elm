@@ -6,12 +6,12 @@ import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
 import Page.Errored as Errored exposing (PageLoadError)
 import Page.Home as Home
+import Page.Sold as Sold
 import Page.NotFound as NotFound
 import Route exposing (Route)
 import Task
 import Views.Page as Page exposing (ActivePage)
 import Data.Storage as Storage exposing (Storage)
-import Ports
 
 
 -- WARNING: Based on discussions around how asset management features
@@ -25,6 +25,7 @@ type Page
     | NotFound
     | Errored PageLoadError
     | Home Home.Model
+    | Sold Sold.Model
     | Login
 
 
@@ -112,6 +113,10 @@ viewPage session isLoading page =
                     |> frame Page.Home
                     |> Html.map HomeMsg
 
+            Sold subModel ->
+                Sold.view session subModel
+                    |> frame Page.Sold
+
 
 
 -- SUBSCRIPTIONS --
@@ -162,6 +167,9 @@ pageSubscriptions page =
         Home _ ->
             Sub.none
 
+        Sold _ ->
+            Sub.none
+
 
 
 -- UPDATE --
@@ -171,6 +179,7 @@ type Msg
     = SetRoute (Maybe Route)
     | HomeLoaded (Result PageLoadError Home.Model)
     | HomeMsg Home.Msg
+    | SoldLoaded (Result PageLoadError Sold.Model)
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -216,6 +225,9 @@ setRoute maybeRoute model =
             Just (Route.Login) ->
                 ( { model | pageState = Loaded Login }, Cmd.none )
 
+            Just (Route.Sold) ->
+                transition SoldLoaded (Sold.init model.session)
+
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )
 pageErrored model activePage errorMessage =
@@ -257,6 +269,12 @@ updatePage page msg model =
             ( HomeLoaded (Err error), _ ) ->
                 ( { model | pageState = Loaded (Errored error) }, Cmd.none )
 
+            ( SoldLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Sold subModel) }, Cmd.none )
+
+            ( SoldLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
             ( HomeMsg subMsg, Home subModel ) ->
                 toPage Home HomeMsg (Home.update session) subMsg subModel
 
@@ -265,8 +283,8 @@ updatePage page msg model =
                 -- NotFound page.
                 ( model, Cmd.none )
 
+            -- Disregard incoming messages that arrived for the wrong page
             ( _, _ ) ->
-                -- Disregard incoming messages that arrived for the wrong page
                 ( model, Cmd.none )
 
 

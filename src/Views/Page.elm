@@ -19,6 +19,7 @@ under Other.
 type ActivePage
     = Other
     | Home
+    | Sold
 
 
 {-| Take a page's Html and frame it with a header and footer.
