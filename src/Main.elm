@@ -87,7 +87,12 @@ viewPage : Session -> Bool -> Page -> Html Msg
 viewPage session isLoading page =
     let
         frame =
-            Page.frame isLoading
+            case session.maybeAuthToken of
+                Just _ ->
+                    Page.frame isLoading True
+
+                Nothing ->
+                    Page.frame isLoading False
     in
         case page of
             NotFound ->

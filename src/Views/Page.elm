@@ -7,6 +7,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Route exposing (Route)
 import Views.Spinner exposing (spinner)
+import Request.Helpers exposing (loginUrl)
 
 
 {-| Determines which navbar link (if any) will be rendered as active.
@@ -31,17 +32,17 @@ isLoading is for determining whether we should show a loading spinner
 in the header. (This comes up during slow page transitions.)
 
 -}
-frame : Bool -> ActivePage -> Html msg -> Html msg
-frame isLoading page content =
+frame : Bool -> Bool -> ActivePage -> Html msg -> Html msg
+frame isLoading isSignedIn page content =
     div [ class "page-frame" ]
-        [ viewHeader page isLoading
+        [ viewHeader isSignedIn page isLoading
         , content
         , viewFooter
         ]
 
 
-viewHeader : ActivePage -> Bool -> Html msg
-viewHeader page isLoading =
+viewHeader : Bool -> ActivePage -> Bool -> Html msg
+viewHeader isSignedIn page isLoading =
     nav [ class "navbar navbar-light" ]
         [ div [ class "container" ]
             [ a [ class "navbar-brand", Route.href <| Route.Home Nothing ]
@@ -51,8 +52,19 @@ viewHeader page isLoading =
                     isLoading
                     spinner
                 )
-                    :: [ (navbarLink (page == Home) (Route.Home Nothing) [ text "Home" ]) ]
+                    :: navbarLink (page == Home) (Route.Home Nothing) [ text "Home" ]
+                    :: (viewSignIn isSignedIn)
             ]
+        ]
+
+
+viewSignIn : Bool -> List (Html msg)
+viewSignIn isSignedIn =
+    if isSignedIn then
+        []
+    else
+        [ li [ classList [ ( "nav-item", True ) ] ]
+            [ a [ class "nav-link", href loginUrl ] [ text "Login" ] ]
         ]
 
 

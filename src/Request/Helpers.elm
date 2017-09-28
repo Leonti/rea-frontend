@@ -1,4 +1,4 @@
-module Request.Helpers exposing (apiUrl)
+module Request.Helpers exposing (apiUrl, loginUrl)
 
 
 apiUrl : String -> String
