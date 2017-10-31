@@ -1,4 +1,4 @@
-module Page.Sold exposing (Model, init, view)
+module Page.OnSale exposing (Model, init, view)
 
 {-| The homepage. You can get here via either the / or /#/ routes.
 -}
@@ -6,10 +6,10 @@ module Page.Sold exposing (Model, init, view)
 import Data.Session as Session exposing (Session)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
-import Data.SoldProperty as SoldProperty exposing (SoldProperty)
+import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
 import Http
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
-import Request.SoldProperty
+import Request.OnSaleProperty
 import Task exposing (Task)
 import Views.Page as Page
 
@@ -18,21 +18,21 @@ import Views.Page as Page
 
 
 type alias Model =
-    { soldProperties : List SoldProperty
+    { onSaleProperties : List OnSaleProperty
     }
 
 
 init : Session -> Task PageLoadError Model
 init session =
     let
-        loadSoldProperties =
-            Request.SoldProperty.all session.maybeAuthToken
+        loadOnSaleProperties =
+            Request.OnSaleProperty.all session.maybeAuthToken
                 |> Http.toTask
 
         handleLoadError _ =
-            pageLoadError Page.Sold "Could not load sold properties"
+            pageLoadError Page.OnSale "Could not load on sale properties"
     in
-        Task.map Model loadSoldProperties
+        Task.map Model loadOnSaleProperties
             |> Task.mapError handleLoadError
 
 
@@ -47,8 +47,7 @@ view session model =
             [ div [ class "row" ]
                 [ div [ class "col-md-3" ]
                     [ div [ class "sidebar" ]
-                        [ p [] [ text "Popular Tags" ]
-                        , viewSoldProperties model.soldProperties
+                        [ viewOnSaleProperties model.onSaleProperties
                         ]
                     ]
                 ]
@@ -56,15 +55,15 @@ view session model =
         ]
 
 
-viewSoldProperties : List SoldProperty -> Html msg
-viewSoldProperties soldProperties =
-    div [ class "tag-list" ] (List.map viewSoldProperty soldProperties)
+viewOnSaleProperties : List OnSaleProperty -> Html msg
+viewOnSaleProperties onSaleProperties =
+    div [ class "tag-list" ] (List.map viewOnSaleProperty onSaleProperties)
 
 
-viewSoldProperty : SoldProperty -> Html msg
-viewSoldProperty soldProperty =
+viewOnSaleProperty : OnSaleProperty -> Html msg
+viewOnSaleProperty onSaleProperty =
     a
         [ class "tag-pill tag-default"
         , href "javascript:void(0)"
         ]
-        [ text (soldProperty.location) ]
+        [ text (onSaleProperty.location) ]

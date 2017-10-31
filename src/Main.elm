@@ -7,6 +7,7 @@ import Navigation exposing (Location)
 import Page.Errored as Errored exposing (PageLoadError)
 import Page.Home as Home
 import Page.Sold as Sold
+import Page.OnSale as OnSale
 import Page.NotFound as NotFound
 import Route exposing (Route)
 import Task
@@ -26,6 +27,7 @@ type Page
     | Errored PageLoadError
     | Home Home.Model
     | Sold Sold.Model
+    | OnSale OnSale.Model
     | Login
 
 
@@ -122,6 +124,10 @@ viewPage session isLoading page =
                 Sold.view session subModel
                     |> frame Page.Sold
 
+            OnSale subModel ->
+                OnSale.view session subModel
+                    |> frame Page.OnSale
+
 
 
 -- SUBSCRIPTIONS --
@@ -175,6 +181,9 @@ pageSubscriptions page =
         Sold _ ->
             Sub.none
 
+        OnSale _ ->
+            Sub.none
+
 
 
 -- UPDATE --
@@ -185,6 +194,7 @@ type Msg
     | HomeLoaded (Result PageLoadError Home.Model)
     | HomeMsg Home.Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
+    | OnSaleLoaded (Result PageLoadError OnSale.Model)
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -233,6 +243,9 @@ setRoute maybeRoute model =
             Just (Route.Sold) ->
                 transition SoldLoaded (Sold.init model.session)
 
+            Just (Route.OnSale) ->
+                transition OnSaleLoaded (OnSale.init model.session)
+
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )
 pageErrored model activePage errorMessage =
@@ -278,6 +291,12 @@ updatePage page msg model =
                 ( { model | pageState = Loaded (Sold subModel) }, Cmd.none )
 
             ( SoldLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( OnSaleLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (OnSale subModel) }, Cmd.none )
+
+            ( OnSaleLoaded (Err error), _ ) ->
                 ( { model | pageState = Loaded (Errored error) }, Cmd.none )
 
             ( HomeMsg subMsg, Home subModel ) ->

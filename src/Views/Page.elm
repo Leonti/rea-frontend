@@ -21,6 +21,7 @@ type ActivePage
     = Other
     | Home
     | Sold
+    | OnSale
 
 
 {-| Take a page's Html and frame it with a header and footer.
@@ -46,7 +47,7 @@ viewHeader isSignedIn page isLoading =
     nav [ class "navbar navbar-light" ]
         [ div [ class "container" ]
             [ a [ class "navbar-brand", Route.href <| Route.Home Nothing ]
-                [ text "conduit" ]
+                [ text "Melbourne Apartments" ]
             , ul [ class "nav navbar-nav pull-xs-right" ] <|
                 (viewIf
                     isLoading
@@ -79,15 +80,7 @@ viewIf condition content =
 viewFooter : Html msg
 viewFooter =
     footer []
-        [ div [ class "container" ]
-            [ a [ class "logo-font", href "/" ] [ text "conduit" ]
-            , span [ class "attribution" ]
-                [ text "An interactive learning project from "
-                , a [ href "https://thinkster.io" ] [ text "Thinkster" ]
-                , text ". Code & design licensed under MIT."
-                ]
-            ]
-        ]
+        []
 
 
 navbarLink : Bool -> Route -> List (Html msg) -> Html msg

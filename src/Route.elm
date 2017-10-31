@@ -15,6 +15,7 @@ type Route
     = Home (Maybe AuthToken)
     | Login
     | Sold
+    | OnSale
 
 
 accessTokenParser : Parser (AuthToken -> a) a
@@ -39,6 +40,7 @@ route =
         , Url.map (Home Nothing) (s "")
         , Url.map Login (s "login")
         , Url.map Sold (s "sold")
+        , Url.map OnSale (s "on-sale")
         ]
 
 
@@ -64,6 +66,9 @@ routeToString page =
 
                 Sold ->
                     [ "sold" ]
+
+                OnSale ->
+                    [ "on-sale" ]
     in
         "#/" ++ String.join "/" pieces
 
