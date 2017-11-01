@@ -5,6 +5,8 @@ RUN yarn global add elm
 WORKDIR /app
 COPY . /app
 
+RUN sed -i.bak 's/False/True/' src/Request/Helpers.elm
+
 RUN elm-make --yes --output=elm.js src/Main.elm
 
 FROM nginx:alpine
