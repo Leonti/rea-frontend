@@ -1,7 +1,8 @@
 sudo: false
 
-services:
-  - docker
+before_install:
+  - curl -fsSL get.docker.com -o get-docker.sh
+  - sh get-docker.sh
 
 script:
 - bash build.sh
