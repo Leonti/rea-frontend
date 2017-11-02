@@ -5,6 +5,8 @@ module Page.OnSale exposing (Model, init, view)
 
 import Data.Session as Session exposing (Session)
 import Html exposing (..)
+import Svg exposing (svg, use)
+import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
 import Http
@@ -43,12 +45,10 @@ init session =
 view : Session -> Model -> Html msg
 view session model =
     div [ class "home-page" ]
-        [ div [ class "container page" ]
+        [ div [ class "container" ]
             [ div [ class "row" ]
-                [ div [ class "col-md-3" ]
-                    [ div [ class "sidebar" ]
-                        [ viewOnSaleProperties model.onSaleProperties
-                        ]
+                [ div [ class "col" ]
+                    [ viewOnSaleProperties model.onSaleProperties
                     ]
                 ]
             ]
@@ -57,13 +57,18 @@ view session model =
 
 viewOnSaleProperties : List OnSaleProperty -> Html msg
 viewOnSaleProperties onSaleProperties =
-    div [ class "tag-list" ] (List.map viewOnSaleProperty onSaleProperties)
+    div [ class "list-group" ] (List.map viewOnSaleProperty onSaleProperties)
 
 
 viewOnSaleProperty : OnSaleProperty -> Html msg
 viewOnSaleProperty onSaleProperty =
-    a
-        [ class "tag-pill tag-default"
-        , href "javascript:void(0)"
+    div
+        [ class "list-group-item list-group-item-action flex-column align-items-start"
         ]
-        [ text (onSaleProperty.location) ]
+        [ div [ class "d-flex w-100 justify-content-between" ]
+            [ h5 [ class "mb-1" ]
+                [ text (onSaleProperty.location) ]
+            , span [ class "text-muted" ] [ text "20 Aug 2016" ]
+            , svg [] [ use [ xlinkHref "assets/sprite.svg#si-glyph-bed" ] [] ]
+            ]
+        ]
