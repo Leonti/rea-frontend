@@ -13,6 +13,7 @@ type alias OnSaleProperty =
     , bathrooms : Int
     , bedrooms : Int
     , cars : Int
+    , extractedAt : Int
     , isSold : Bool
     , soldAt : Maybe Int
     , salePrice : Maybe Int
@@ -30,6 +31,7 @@ decoder =
         |> required "bathrooms" Decode.int
         |> required "bedrooms" Decode.int
         |> required "cars" Decode.int
+        |> required "extractedAt" Decode.int
         |> required "isSold" Decode.bool
         |> optional "soldAt" (Decode.nullable Decode.int) Nothing
         |> optional "salePrice" (Decode.nullable Decode.int) Nothing

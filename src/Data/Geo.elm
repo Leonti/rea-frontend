@@ -5,8 +5,7 @@ import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 
 
 type alias Geo =
-    { formattedAddress : String
-    , latitude : Float
+    { latitude : Float
     , longitude : Float
     }
 
@@ -14,6 +13,5 @@ type alias Geo =
 decoder : Decoder Geo
 decoder =
     decode Geo
-        |> required "formattedAddress" Decode.string
         |> required "latitude" Decode.float
         |> required "longitude" Decode.float
