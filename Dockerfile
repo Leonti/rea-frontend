@@ -14,3 +14,4 @@ FROM nginx:alpine
 COPY --from=0 /app/index.html /usr/share/nginx/html/index.html
 COPY --from=0 /app/elm.js /usr/share/nginx/html/elm.js
 COPY --from=0 /app/assets/sprite.svg /usr/share/nginx/html/assets/sprite.svg
+COPY --from=0 /app/assets/style.css /usr/share/nginx/html/assets/style.css
