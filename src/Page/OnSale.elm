@@ -117,7 +117,7 @@ viewPropertyStats onSaleProperty =
     let
         days =
             List.length onSaleProperty.datesPrices
-        sold = if onSaleProperty.isSold then " SOLD" else ""
+        sold = if onSaleProperty.isSold then " SOLD ($" ++ (toString <| Maybe.withDefault 0 onSaleProperty.salePrice) ++ ")" else ""
     in
         div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ]
 
