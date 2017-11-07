@@ -85,7 +85,7 @@ viewOnSaleProperty onSaleProperty =
             [ h5 [ class "mb-1" ]
                 [ text (onSaleProperty.location) ]
             , span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ]
-            , a [href <| "https://realestate.com.au" ++ onSaleProperty.link] [text "Link"]
+            , a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ] [ text "Link" ]
             , viewPropertyDetails onSaleProperty
             , viewLastPrice onSaleProperty
             , viewPropertyStats onSaleProperty
@@ -117,7 +117,18 @@ viewPropertyStats onSaleProperty =
     let
         days =
             List.length onSaleProperty.datesPrices
-        sold = if onSaleProperty.isSold then " SOLD ($" ++ (toString <| Maybe.withDefault 0 onSaleProperty.salePrice) ++ ")" else ""
+
+        salePrice =
+            toString <| Maybe.withDefault 0 onSaleProperty.salePrice
+
+        saleDate =
+            Maybe.withDefault "" (Maybe.map formattedTimestamp onSaleProperty.soldAt)
+
+        sold =
+            if onSaleProperty.isSold then
+                " SOLD for $" ++ salePrice ++ " on " ++ saleDate
+            else
+                ""
     in
         div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ]
 
