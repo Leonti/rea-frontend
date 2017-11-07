@@ -34,11 +34,24 @@ init session =
             Request.OnSaleProperty.all session.maybeAuthToken
                 |> Http.toTask
 
+        toModel properties =
+            Model <| List.filter hasLocation properties
+
         handleLoadError _ =
             pageLoadError Page.OnSale "Could not load on sale properties"
     in
-        Task.map Model loadOnSaleProperties
+        Task.map toModel loadOnSaleProperties
             |> Task.mapError handleLoadError
+
+
+hasLocation : OnSaleProperty -> Bool
+hasLocation onSaleProperty =
+    case onSaleProperty.geo of
+        Just geo ->
+            True
+
+        Nothing ->
+            False
 
 
 
@@ -73,6 +86,8 @@ viewOnSaleProperty onSaleProperty =
                 [ text (onSaleProperty.location) ]
             , span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ]
             , viewPropertyDetails onSaleProperty
+            , viewLastPrice onSaleProperty
+            , viewPropertyStats onSaleProperty
             ]
         ]
 
@@ -85,6 +100,24 @@ formattedTimestamp t =
 timestampToDate : Int -> Date
 timestampToDate t =
     Date.fromTime (toFloat <| t * 1000)
+
+
+viewLastPrice : OnSaleProperty -> Html msg
+viewLastPrice onSaleProperty =
+    let
+        lastPrice =
+            Maybe.withDefault 0 <| Maybe.map .price (List.head <| List.sortBy .timestamp onSaleProperty.datesPrices)
+    in
+        div [] [ text <| "$" ++ (toString lastPrice) ]
+
+
+viewPropertyStats : OnSaleProperty -> Html msg
+viewPropertyStats onSaleProperty =
+    let
+        days =
+            List.length onSaleProperty.datesPrices
+    in
+        div [] [ text <| "On sale for " ++ (toString days) ++ " days" ]
 
 
 viewPropertyDetails : OnSaleProperty -> Html msg
