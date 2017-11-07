@@ -85,6 +85,7 @@ viewOnSaleProperty onSaleProperty =
             [ h5 [ class "mb-1" ]
                 [ text (onSaleProperty.location) ]
             , span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ]
+            , a [href <| "https://realestate.com.au" ++ onSaleProperty.link] [text "Link"]
             , viewPropertyDetails onSaleProperty
             , viewLastPrice onSaleProperty
             , viewPropertyStats onSaleProperty
