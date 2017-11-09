@@ -4,7 +4,7 @@ import Html exposing (Attribute)
 import Html.Attributes as Attr
 import String
 import Navigation exposing (Location)
-import Data.AuthToken exposing (AuthToken(..), extractAccessToken)
+import Data.AuthToken exposing (AuthToken, extractAccessToken)
 import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string, custom)
 
 
@@ -26,8 +26,11 @@ accessTokenParser =
 extractToken : String -> Result String AuthToken
 extractToken hash =
     case extractAccessToken hash of
-        Just accessToken ->
-            Ok (AuthToken accessToken)
+        Just ( token, expiresAt ) ->
+            Ok
+                { token = token
+                , expiresAt = expiresAt
+                }
 
         Nothing ->
             Err "no access token present"
