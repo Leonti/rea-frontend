@@ -9,7 +9,7 @@ import Dict
 
 type alias AuthToken =
     { token : String
-    , expiresAt : Int
+    , expiresIn : Int
     }
 
 
@@ -17,7 +17,7 @@ encode : AuthToken -> Value
 encode authToken =
     Encode.object
         [ ( "token", Encode.string authToken.token )
-        , ( "expiresAt", Encode.int authToken.expiresAt )
+        , ( "expiresIn", Encode.int authToken.expiresIn )
         ]
 
 
@@ -25,7 +25,7 @@ decoder : Decoder AuthToken
 decoder =
     decode AuthToken
         |> required "token" Decode.string
-        |> required "expiresAt" Decode.int
+        |> required "expiresIn" Decode.int
 
 
 withAuthorization : Maybe AuthToken -> RequestBuilder a -> RequestBuilder a
@@ -55,9 +55,9 @@ extractAccessToken hash =
             Dict.get "access_token" allParams
 
         maybeExpires =
-            Dict.get "expires_at" allParams
+            Dict.get "expires_in" allParams
     in
-        Maybe.map2 (\token expiresAt -> ( token, (Result.withDefault 0 (String.toInt expiresAt)) )) maybeToken maybeExpires
+        Maybe.map2 (\token expiresIn -> ( token, (Result.withDefault 0 (String.toInt expiresIn)) )) maybeToken maybeExpires
 
 
 splitAtFirst : Char -> String -> ( String, String )

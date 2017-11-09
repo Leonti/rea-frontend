@@ -26,10 +26,10 @@ accessTokenParser =
 extractToken : String -> Result String AuthToken
 extractToken hash =
     case extractAccessToken hash of
-        Just ( token, expiresAt ) ->
+        Just ( token, expiresIn ) ->
             Ok
                 { token = token
-                , expiresAt = expiresAt
+                , expiresIn = expiresIn
                 }
 
         Nothing ->

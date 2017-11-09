@@ -230,7 +230,7 @@ setRoute maybeRoute model =
                       }
                     , Cmd.batch
                         [ Task.attempt HomeLoaded (Home.init model.session)
-                        , Storage.store { token = Just authToken }
+                        , Storage.store { token = Just authToken, expiresAt = Just 0 }
                         ]
                     )
 

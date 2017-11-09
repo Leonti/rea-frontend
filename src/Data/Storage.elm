@@ -10,6 +10,7 @@ import Ports
 
 type alias Storage =
     { token : Maybe AuthToken
+    , expiresAt : Maybe Int
     }
 
 
@@ -21,12 +22,14 @@ decoder : Decoder Storage
 decoder =
     decode Storage
         |> required "token" (Decode.nullable AuthToken.decoder)
+        |> required "expiresAt" (Decode.nullable Decode.int)
 
 
 encode : Storage -> Value
 encode storage =
     Encode.object
         [ ( "token", EncodeExtra.maybe AuthToken.encode storage.token )
+        , ( "expiresAt", EncodeExtra.maybe Encode.int storage.expiresAt )
         ]
 
 
