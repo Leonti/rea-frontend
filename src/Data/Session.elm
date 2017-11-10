@@ -4,7 +4,9 @@ import Data.AuthToken exposing (AuthToken)
 
 
 type alias Session =
-    { maybeAuthToken : Maybe AuthToken }
+    { maybeAuthToken : Maybe AuthToken
+    , maybeExpiresAt : Maybe Int
+    }
 
 
 attempt : String -> (AuthToken -> Cmd msg) -> Session -> ( List String, Cmd msg )

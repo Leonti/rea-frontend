@@ -13,6 +13,8 @@ import Route exposing (Route)
 import Task
 import Views.Page as Page exposing (ActivePage)
 import Data.Storage as Storage exposing (Storage)
+import Task
+import Time exposing (Time)
 
 
 -- WARNING: Based on discussions around how asset management features
@@ -43,6 +45,8 @@ type PageState
 type alias Model =
     { session : Session
     , pageState : PageState
+    , currentRoute : Maybe Route
+    , currentTime : Maybe Time
     }
 
 
@@ -51,11 +55,24 @@ init val location =
     let
         storage =
             decodeStorageFromJson val
+
+        timeModelCmd =
+            Task.perform InitialTime Time.now
     in
-        setRoute (Route.fromLocation location)
-            { pageState = Loaded initialPage
-            , session = { maybeAuthToken = Maybe.andThen .token storage }
-            }
+        ( { pageState = Loaded initialPage
+          , session =
+                { maybeAuthToken = Maybe.andThen .token storage
+                , maybeExpiresAt = Maybe.andThen .expiresAt storage
+                }
+          , currentRoute = Route.fromLocation location
+          , currentTime = Nothing
+          }
+        , Task.perform InitialTime Time.now
+        )
+
+
+
+--        setRoute (Route.fromLocation location)
 
 
 decodeStorageFromJson : Value -> Maybe Storage
@@ -190,15 +207,16 @@ pageSubscriptions page =
 
 
 type Msg
-    = SetRoute (Maybe Route)
+    = InitialTime Time
+    | SetRoute (Maybe Route)
     | HomeLoaded (Result PageLoadError Home.Model)
     | HomeMsg Home.Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
 
 
-setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
-setRoute maybeRoute model =
+setRoute : Model -> ( Model, Cmd Msg )
+setRoute model =
     let
         transition toMsg task =
             ( { model | pageState = TransitioningFrom (getPage model.pageState) }
@@ -208,7 +226,7 @@ setRoute maybeRoute model =
         errored =
             pageErrored model
     in
-        case maybeRoute of
+        case model.currentRoute of
             Nothing ->
                 ( { model | pageState = Loaded NotFound }, Cmd.none )
 
@@ -217,10 +235,14 @@ setRoute maybeRoute model =
                     session =
                         model.session
 
+                    maybeExpiresAt =
+                        Maybe.map (\t -> (round <| Time.inSeconds t) + authToken.expiresIn) model.currentTime
+
                     updatedSession : Session
                     updatedSession =
                         { session
                             | maybeAuthToken = Just authToken
+                            , maybeExpiresAt = maybeExpiresAt
                         }
                 in
                     ( { model
@@ -230,7 +252,10 @@ setRoute maybeRoute model =
                       }
                     , Cmd.batch
                         [ Task.attempt HomeLoaded (Home.init model.session)
-                        , Storage.store { token = Just authToken, expiresAt = Just 0 }
+                        , Storage.store
+                            { token = Just authToken
+                            , expiresAt = maybeExpiresAt
+                            }
                         ]
                     )
 
@@ -278,8 +303,11 @@ updatePage page msg model =
             pageErrored model
     in
         case ( msg, page ) of
+            ( InitialTime currentTime, _ ) ->
+                setRoute { model | currentTime = Just currentTime }
+
             ( SetRoute route, _ ) ->
-                setRoute route model
+                setRoute model
 
             ( HomeLoaded (Ok subModel), _ ) ->
                 ( { model | pageState = Loaded (Home subModel) }, Cmd.none )
