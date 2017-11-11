@@ -55,9 +55,6 @@ init val location =
     let
         storage =
             decodeStorageFromJson val
-
-        timeModelCmd =
-            Task.perform InitialTime Time.now
     in
         ( { pageState = Loaded initialPage
           , session =
@@ -96,22 +93,26 @@ view : Model -> Html Msg
 view model =
     case model.pageState of
         Loaded page ->
-            viewPage model.session False page
+            viewPage model False page
 
         TransitioningFrom page ->
-            viewPage model.session True page
+            viewPage model True page
 
 
-viewPage : Session -> Bool -> Page -> Html Msg
-viewPage session isLoading page =
+isValidAuthentication : Model -> Bool
+isValidAuthentication model =
+    let
+        maybeIsValid =
+            Maybe.map3 (\_ expiresAt currentTime -> (currentTime - 300) < expiresAt) model.session.maybeAuthToken model.session.maybeExpiresAt (Maybe.map inSeconds model.currentTime)
+    in
+        Maybe.withDefault False maybeIsValid
+
+
+viewPage : Model -> Bool -> Page -> Html Msg
+viewPage model isLoading page =
     let
         frame =
-            case session.maybeAuthToken of
-                Just _ ->
-                    Page.frame isLoading True
-
-                Nothing ->
-                    Page.frame isLoading False
+            Page.frame isLoading (isValidAuthentication model)
     in
         case page of
             NotFound ->
@@ -129,21 +130,22 @@ viewPage session isLoading page =
                     |> frame Page.Other
 
             Errored subModel ->
-                Errored.view session subModel
+                Errored.view model.session subModel
                     |> frame Page.Other
 
             Home subModel ->
-                Home.view session subModel
+                Home.view model.session subModel
                     |> frame Page.Home
                     |> Html.map HomeMsg
 
             Sold subModel ->
-                Sold.view session subModel
+                Sold.view model.session subModel
                     |> frame Page.Sold
 
             OnSale subModel ->
-                OnSale.view session subModel
+                OnSale.view model.session subModel
                     |> frame Page.OnSale
+                    |> Html.map OnSaleMsg
 
 
 
@@ -157,7 +159,9 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ pageSubscriptions (getPage model.pageState)
-          --        , Sub.map SetUser sessionChange
+        , Time.every (Time.second * 5) CurrentTime
+
+        --        , Sub.map SetUser sessionChange
         ]
 
 
@@ -198,8 +202,8 @@ pageSubscriptions page =
         Sold _ ->
             Sub.none
 
-        OnSale _ ->
-            Sub.none
+        OnSale subModel ->
+            OnSale.subscriptions subModel |> Sub.map OnSaleMsg
 
 
 
@@ -208,11 +212,18 @@ pageSubscriptions page =
 
 type Msg
     = InitialTime Time
+    | CurrentTime Time
     | SetRoute (Maybe Route)
     | HomeLoaded (Result PageLoadError Home.Model)
     | HomeMsg Home.Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
+    | OnSaleMsg OnSale.Msg
+
+
+inSeconds : Time -> Int
+inSeconds t =
+    Time.inSeconds t |> round
 
 
 setRoute : Model -> ( Model, Cmd Msg )
@@ -236,7 +247,7 @@ setRoute model =
                         model.session
 
                     maybeExpiresAt =
-                        Maybe.map (\t -> (round <| Time.inSeconds t) + authToken.expiresIn) model.currentTime
+                        Maybe.map (\t -> (inSeconds t) + authToken.expiresIn) model.currentTime
 
                     updatedSession : Session
                     updatedSession =
@@ -262,14 +273,14 @@ setRoute model =
             Just (Route.Home Nothing) ->
                 transition HomeLoaded (Home.init model.session)
 
-            Just (Route.Login) ->
+            Just Route.Login ->
                 ( { model | pageState = Loaded Login }, Cmd.none )
 
-            Just (Route.Sold) ->
+            Just Route.Sold ->
                 transition SoldLoaded (Sold.init model.session)
 
-            Just (Route.OnSale) ->
-                transition OnSaleLoaded (OnSale.init model.session)
+            Just Route.OnSale ->
+                transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
 
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )
@@ -306,6 +317,9 @@ updatePage page msg model =
             ( InitialTime currentTime, _ ) ->
                 setRoute { model | currentTime = Just currentTime }
 
+            ( CurrentTime currentTime, _ ) ->
+                ( { model | currentTime = Just currentTime }, Cmd.none )
+
             ( SetRoute route, _ ) ->
                 setRoute model
 
@@ -326,6 +340,9 @@ updatePage page msg model =
 
             ( OnSaleLoaded (Err error), _ ) ->
                 ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( OnSaleMsg subMsg, OnSale subModel ) ->
+                toPage OnSale OnSaleMsg (OnSale.update session) subMsg subModel
 
             ( HomeMsg subMsg, Home subModel ) ->
                 toPage Home HomeMsg (Home.update session) subMsg subModel

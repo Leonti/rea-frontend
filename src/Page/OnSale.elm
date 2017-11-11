@@ -1,4 +1,4 @@
-module Page.OnSale exposing (Model, init, view)
+module Page.OnSale exposing (Model, Msg, init, update, view, subscriptions)
 
 {-| The homepage. You can get here via either the / or /#/ routes.
 -}
@@ -17,6 +17,7 @@ import Task exposing (Task)
 import Views.Page as Page
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
+import Time exposing (Time)
 
 
 -- MODEL --
@@ -24,18 +25,21 @@ import Date.Extra.Format as Format exposing (format)
 
 type alias Model =
     { onSaleProperties : List OnSaleProperty
+    , currentTime : Time
     }
 
 
-init : Session -> Task PageLoadError Model
-init session =
+init : Session -> Time -> Task PageLoadError Model
+init session currentTime =
     let
         loadOnSaleProperties =
             Request.OnSaleProperty.all session.maybeAuthToken
                 |> Http.toTask
 
         toModel properties =
-            Model <| List.filter hasLocation properties
+            { onSaleProperties = List.filter hasLocation properties
+            , currentTime = currentTime
+            }
 
         handleLoadError _ =
             pageLoadError Page.OnSale "Could not load on sale properties"
@@ -55,14 +59,31 @@ hasLocation onSaleProperty =
 
 
 
+-- UPDATE --
+
+
+type Msg
+    = CurrentTime Time
+
+
+update : Session -> Msg -> Model -> ( Model, Cmd Msg )
+update session msg model =
+    case msg of
+        CurrentTime time ->
+            ( { model | currentTime = time }, Cmd.none )
+
+
+
 -- VIEW --
 
 
-view : Session -> Model -> Html msg
+view : Session -> Model -> Html Msg
 view session model =
     div [ class "home-page" ]
         [ div [ class "container" ]
             [ div [ class "row" ]
+                [ text <| toString model.currentTime ]
+            , div [ class "row" ]
                 [ div [ class "col" ]
                     [ viewOnSaleProperties model.onSaleProperties
                     ]
@@ -142,4 +163,15 @@ viewPropertyDetails onSaleProperty =
         , span [] [ text <| toString onSaleProperty.bathrooms ]
         , svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-car" ] [] ]
         , span [] [ text <| toString onSaleProperty.cars ]
+        ]
+
+
+
+-- SUBSCRIPTIONS --
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Time.every (Time.second * 5) CurrentTime
         ]
