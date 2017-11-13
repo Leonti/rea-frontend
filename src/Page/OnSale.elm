@@ -9,7 +9,7 @@ import Date exposing (Date, fromTime)
 import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
-import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
+import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyDates)
 import Http
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Request.OnSaleProperty
@@ -83,6 +83,8 @@ view session model =
         [ div [ class "container" ]
             [ div [ class "row" ]
                 [ text <| toString model.currentTime ]
+            , div [ class "row" ]
+                (List.map (\d -> text <| (toString d) ++ " ") (propertyDates model.onSaleProperties))
             , div [ class "row" ]
                 [ div [ class "col" ]
                     [ viewOnSaleProperties model.onSaleProperties
