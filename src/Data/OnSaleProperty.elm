@@ -5,8 +5,9 @@ import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
 import Data.DatePrice as DatePrice exposing (DatePrice)
 import Data.Geo as Geo exposing (Geo)
 import Data.Distances as Distances exposing (Distances)
-import Date exposing (Date, year, month, day)
-import Date.Extra.Create exposing (dateFromFields)
+import Date exposing (year, month, day)
+import Time.Date as LocalDate exposing (Date, date)
+import Date.Extra.Core exposing (monthToInt)
 import List.Extra exposing (uniqueBy)
 
 
@@ -49,7 +50,7 @@ propertyDates onSaleProperties =
         firstDates =
             List.filterMap firstDate onSaleProperties
     in
-        uniqueBy Date.toTime firstDates
+        uniqueBy LocalDate.toTuple firstDates
 
 
 firstDate : OnSaleProperty -> Maybe Date
@@ -61,6 +62,6 @@ firstDate onSaleProperty =
         Maybe.map (\t -> zeroedDate <| Date.fromTime (toFloat t * 1000)) maybeFirstTimestamp
 
 
-zeroedDate : Date -> Date
+zeroedDate : Date.Date -> Date
 zeroedDate d =
-    dateFromFields (year d) (month d) (day d) 0 0 0 0
+    date (year d) (monthToInt <| month d) (day d)
