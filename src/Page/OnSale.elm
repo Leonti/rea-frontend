@@ -18,6 +18,7 @@ import Views.Page as Page
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
 import Time exposing (Time)
+import Route as Route exposing (Route(..))
 
 
 -- MODEL --
@@ -84,7 +85,7 @@ view session model =
             [ div [ class "row" ]
                 [ text <| toString model.currentTime ]
             , div [ class "row" ]
-                (List.map (\d -> text <| (toString d) ++ " ") (propertyDates model.onSaleProperties))
+                (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| toString d ]) (propertyDates model.onSaleProperties))
             , div [ class "row" ]
                 [ div [ class "col" ]
                     [ viewOnSaleProperties model.onSaleProperties

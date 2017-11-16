@@ -6,6 +6,7 @@ import String
 import Navigation exposing (Location)
 import Data.AuthToken exposing (AuthToken, extractAccessToken)
 import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string, custom)
+import Time.Date as LocalDate exposing (Date, fromISO8601, toISO8601)
 
 
 -- ROUTING --
@@ -16,6 +17,7 @@ type Route
     | Login
     | Sold
     | OnSale
+    | OnSaleForDate Date
 
 
 accessTokenParser : Parser (AuthToken -> a) a
@@ -36,6 +38,11 @@ extractToken hash =
             Err "no access token present"
 
 
+dateParser : Parser (Date -> a) a
+dateParser =
+    custom "DATE_PARSER" fromISO8601
+
+
 route : Parser (Route -> a) a
 route =
     oneOf
@@ -43,6 +50,7 @@ route =
         , Url.map (Home Nothing) (s "")
         , Url.map Login (s "login")
         , Url.map Sold (s "sold")
+        , Url.map OnSaleForDate (s "on-sale" </> dateParser)
         , Url.map OnSale (s "on-sale")
         ]
 
@@ -72,6 +80,9 @@ routeToString page =
 
                 OnSale ->
                     [ "on-sale" ]
+
+                OnSaleForDate date ->
+                    [ "on-sale", toISO8601 date ]
     in
         "#/" ++ String.join "/" pieces
 

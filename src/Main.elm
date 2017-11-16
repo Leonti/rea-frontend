@@ -202,11 +202,10 @@ pageSubscriptions page =
             Sub.none
 
         OnSale subModel ->
-            Sub.none
+            OnSale.subscriptions subModel |> Sub.map OnSaleMsg
 
 
 
---    OnSale.subscriptions subModel |> Sub.map OnSaleMsg
 -- UPDATE --
 
 
@@ -280,6 +279,9 @@ setRoute model =
                 transition SoldLoaded (Sold.init model.session)
 
             Just (Route.OnSale) ->
+                transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
+
+            Just (Route.OnSaleForDate date) ->
                 transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
 
 
