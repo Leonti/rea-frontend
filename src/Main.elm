@@ -9,6 +9,7 @@ import Page.Home as Home
 import Page.Sold as Sold
 import Page.OnSale as OnSale
 import Page.NotFound as NotFound
+import CachedProperties as CachedProperties
 import Route exposing (Route)
 import Task
 import Views.Page as Page exposing (ActivePage)
@@ -45,6 +46,7 @@ type PageState
 type alias Model =
     { session : Session
     , pageState : PageState
+    , cachedPropertiesState : CachedProperties.State
     , currentRoute : Maybe Route
     , currentTime : Maybe Time
     }
@@ -57,6 +59,7 @@ init val location =
             decodeStorageFromJson val
     in
         ( { pageState = Loaded initialPage
+          , cachedPropertiesState = CachedProperties.initialState
           , session =
                 { maybeAuthToken = Maybe.andThen .token storage
                 , maybeExpiresAt = Maybe.andThen .expiresAt storage
@@ -218,6 +221,7 @@ type Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
     | OnSaleMsg OnSale.Msg
+    | CachedPropertiesMsg CachedProperties.Msg
 
 
 inSeconds : Time -> Int
@@ -279,8 +283,13 @@ setRoute model =
                 transition SoldLoaded (Sold.init model.session)
 
             Just (Route.OnSale) ->
-                transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
+                let
+                    ( cachedPropertiesState, cachedPropertiesCmd ) =
+                        CachedProperties.init model.session
+                in
+                    ( { model | cachedPropertiesState = cachedPropertiesState }, Cmd.map CachedPropertiesMsg cachedPropertiesCmd )
 
+            --                    transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
             Just (Route.OnSaleForDate date) ->
                 transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
 
@@ -321,6 +330,11 @@ updatePage page msg model =
 
             ( CurrentTime currentTime, _ ) ->
                 ( { model | currentTime = Just currentTime }, Cmd.none )
+
+            ( CachedPropertiesMsg msg, _ ) ->
+                ( { model | cachedPropertiesState = CachedProperties.update model.cachedPropertiesState msg }
+                , Cmd.none
+                )
 
             ( SetRoute route, _ ) ->
                 setRoute { model | currentRoute = route }

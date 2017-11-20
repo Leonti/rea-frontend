@@ -1,4 +1,4 @@
-module CachedProperties exposing (State)
+module CachedProperties exposing (State, initialState, init, update, Msg)
 
 import Data.Session as Session exposing (Session)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
@@ -24,6 +24,11 @@ type LoadingState a
 type Msg
     = OnSaleResult (Result Http.Error (List OnSaleProperty))
     | SoldResult (Result Http.Error (List SoldProperty))
+
+
+initialState : State
+initialState =
+    { onSale = NotLoaded, sold = NotLoaded }
 
 
 init : Session -> ( State, Cmd Msg )
