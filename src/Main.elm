@@ -149,7 +149,7 @@ viewPage model isLoading page =
                     |> frame Page.Sold
 
             OnSale subModel ->
-                OnSale.view model.session subModel
+                OnSale.view model.session (Maybe.withDefault 0.0 model.currentTime) (CachedProperties.onSale model.cachedOnSaleState) subModel
                     |> frame Page.OnSale
                     |> Html.map OnSaleMsg
 
@@ -166,7 +166,8 @@ subscriptions model =
     Sub.batch
         [ pageSubscriptions (getPage model.pageState)
         , Time.every (Time.second * 5) CurrentTime
-          --        , Sub.map SetUser sessionChange
+
+        --        , Sub.map SetUser sessionChange
         ]
 
 
@@ -281,18 +282,23 @@ setRoute model =
             Just (Route.Home Nothing) ->
                 transition HomeLoaded (Home.init model.session)
 
-            Just (Route.Login) ->
+            Just Route.Login ->
                 ( { model | pageState = Loaded Login }, Cmd.none )
 
-            Just (Route.Sold) ->
+            Just Route.Sold ->
                 transition SoldLoaded (Sold.init model.session)
 
-            Just (Route.OnSale) ->
+            Just Route.OnSale ->
                 let
                     ( cachedOnSaleState, cachedPropertiesCmd ) =
                         CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
                 in
-                    ( { model | cachedOnSaleState = cachedOnSaleState }, Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd )
+                    ( { model
+                        | cachedOnSaleState = cachedOnSaleState
+                        , pageState = Loaded (OnSale OnSale.initialModel)
+                      }
+                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    )
 
             --                    transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
             Just (Route.OnSaleForDate date) ->

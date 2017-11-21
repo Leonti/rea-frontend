@@ -1,4 +1,4 @@
-module Page.OnSale exposing (Model, Msg, init, update, view, subscriptions)
+module Page.OnSale exposing (Model, Msg, initialModel, init, update, view, subscriptions)
 
 {-| The homepage. You can get here via either the / or /#/ routes.
 -}
@@ -27,6 +27,13 @@ import Route as Route exposing (Route(..))
 type alias Model =
     { onSaleProperties : List OnSaleProperty
     , currentTime : Time
+    }
+
+
+initialModel : Model
+initialModel =
+    { onSaleProperties = []
+    , currentTime = 0.0
     }
 
 
