@@ -1,4 +1,16 @@
-module CachedProperties exposing (State, initialState, init, update, Msg)
+module CachedProperties
+    exposing
+        ( CachedOnSaleState
+        , CachedSoldState
+        , OnSaleMsg
+        , SoldMsg
+        , initialOnSaleState
+        , initialSoldState
+        , updateOnSale
+        , updateSold
+        , initOrUpdateOnSale
+        , onSale
+        )
 
 import Data.Session as Session exposing (Session)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
@@ -8,10 +20,12 @@ import Task exposing (Task)
 import Http
 
 
-type alias State =
-    { onSale : LoadingState (List OnSaleProperty)
-    , sold : LoadingState (List SoldProperty)
-    }
+type alias CachedOnSaleState =
+    LoadingState (List OnSaleProperty)
+
+
+type alias CachedSoldState =
+    LoadingState (List SoldProperty)
 
 
 type LoadingState a
@@ -21,42 +35,59 @@ type LoadingState a
     | Failed String
 
 
-type Msg
+type OnSaleMsg
     = OnSaleResult (Result Http.Error (List OnSaleProperty))
-    | SoldResult (Result Http.Error (List SoldProperty))
 
 
-initialState : State
-initialState =
-    { onSale = NotLoaded, sold = NotLoaded }
+type SoldMsg
+    = SoldResult (Result Http.Error (List SoldProperty))
 
 
-init : Session -> ( State, Cmd Msg )
-init session =
+initialOnSaleState : CachedOnSaleState
+initialOnSaleState =
+    NotLoaded
+
+
+initialSoldState : CachedSoldState
+initialSoldState =
+    NotLoaded
+
+
+initOrUpdateOnSale : CachedOnSaleState -> Session -> ( CachedOnSaleState, Cmd OnSaleMsg )
+initOrUpdateOnSale state session =
     let
         loadOnSaleProperties =
             Request.OnSaleProperty.all session.maybeAuthToken
                 |> Http.toTask
-
-        state =
-            { onSale = Loading
-            , sold = Loading
-            }
     in
-        ( state, Task.attempt OnSaleResult loadOnSaleProperties )
+        ( Loading, Task.attempt OnSaleResult loadOnSaleProperties )
 
 
-update : State -> Msg -> State
-update state msg =
+onSale : CachedOnSaleState -> Maybe (List OnSaleProperty)
+onSale state =
+    case state of
+        Loaded onSalePropertyList ->
+            Just onSalePropertyList
+
+        _ ->
+            Nothing
+
+
+updateOnSale : CachedOnSaleState -> OnSaleMsg -> CachedOnSaleState
+updateOnSale state msg =
     case msg of
         OnSaleResult (Ok onSale) ->
-            { state | onSale = Loaded onSale }
+            Loaded onSale
 
         OnSaleResult (Err _) ->
-            { state | onSale = Failed "Failed to load on sale properties" }
+            Failed "Failed to load on sale properties"
 
+
+updateSold : CachedSoldState -> SoldMsg -> CachedSoldState
+updateSold state msg =
+    case msg of
         SoldResult (Ok sold) ->
-            { state | sold = Loaded sold }
+            Loaded sold
 
         SoldResult (Err _) ->
-            { state | sold = Failed "Failed to load sold properties" }
+            Failed "Failed to load sold properties"

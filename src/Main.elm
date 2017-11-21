@@ -12,6 +12,7 @@ import Page.NotFound as NotFound
 import CachedProperties as CachedProperties
 import Route exposing (Route)
 import Task
+import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
 import Views.Page as Page exposing (ActivePage)
 import Data.Storage as Storage exposing (Storage)
 import Task
@@ -46,7 +47,8 @@ type PageState
 type alias Model =
     { session : Session
     , pageState : PageState
-    , cachedPropertiesState : CachedProperties.State
+    , cachedOnSaleState : CachedProperties.CachedOnSaleState
+    , cachedSoldState : CachedProperties.CachedSoldState
     , currentRoute : Maybe Route
     , currentTime : Maybe Time
     }
@@ -59,7 +61,8 @@ init val location =
             decodeStorageFromJson val
     in
         ( { pageState = Loaded initialPage
-          , cachedPropertiesState = CachedProperties.initialState
+          , cachedOnSaleState = CachedProperties.initialOnSaleState
+          , cachedSoldState = CachedProperties.initialSoldState
           , session =
                 { maybeAuthToken = Maybe.andThen .token storage
                 , maybeExpiresAt = Maybe.andThen .expiresAt storage
@@ -221,7 +224,9 @@ type Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
     | OnSaleMsg OnSale.Msg
-    | CachedPropertiesMsg CachedProperties.Msg
+    | CachedPropertiesOnSaleMsg CachedProperties.OnSaleMsg
+    | CachedPropertiesSoldMsg CachedProperties.SoldMsg
+    | CachedPropertiesLoaded (List OnSaleProperty)
 
 
 inSeconds : Time -> Int
@@ -284,10 +289,10 @@ setRoute model =
 
             Just (Route.OnSale) ->
                 let
-                    ( cachedPropertiesState, cachedPropertiesCmd ) =
-                        CachedProperties.init model.session
+                    ( cachedOnSaleState, cachedPropertiesCmd ) =
+                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
                 in
-                    ( { model | cachedPropertiesState = cachedPropertiesState }, Cmd.map CachedPropertiesMsg cachedPropertiesCmd )
+                    ( { model | cachedOnSaleState = cachedOnSaleState }, Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd )
 
             --                    transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
             Just (Route.OnSaleForDate date) ->
@@ -331,8 +336,13 @@ updatePage page msg model =
             ( CurrentTime currentTime, _ ) ->
                 ( { model | currentTime = Just currentTime }, Cmd.none )
 
-            ( CachedPropertiesMsg msg, _ ) ->
-                ( { model | cachedPropertiesState = CachedProperties.update model.cachedPropertiesState msg }
+            ( CachedPropertiesOnSaleMsg msg, _ ) ->
+                ( { model | cachedOnSaleState = CachedProperties.updateOnSale model.cachedOnSaleState msg }
+                , Cmd.none
+                )
+
+            ( CachedPropertiesSoldMsg msg, _ ) ->
+                ( { model | cachedSoldState = CachedProperties.updateSold model.cachedSoldState msg }
                 , Cmd.none
                 )
 
