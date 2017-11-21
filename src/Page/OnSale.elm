@@ -78,21 +78,25 @@ update session msg model =
 -- VIEW --
 
 
-view : Session -> Model -> Html Msg
-view session model =
-    div [ class "home-page" ]
-        [ div [ class "container" ]
-            [ div [ class "row" ]
-                [ text <| toString model.currentTime ]
-            , div [ class "row" ]
-                (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| toString d ]) (propertyDates model.onSaleProperties))
-            , div [ class "row" ]
-                [ div [ class "col" ]
-                    [ viewOnSaleProperties model.onSaleProperties
+view : Session -> Time -> Maybe (List OnSaleProperty) -> Model -> Html Msg
+view session currentTime maybeOnSaleProperties model =
+    let
+        onSaleProperties =
+            List.filter hasLocation (Maybe.withDefault [] maybeOnSaleProperties)
+    in
+        div [ class "home-page" ]
+            [ div [ class "container" ]
+                [ div [ class "row" ]
+                    [ text <| toString currentTime ]
+                , div [ class "row" ]
+                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| toString d ]) (propertyDates onSaleProperties))
+                , div [ class "row" ]
+                    [ div [ class "col" ]
+                        [ viewOnSaleProperties onSaleProperties
+                        ]
                     ]
                 ]
             ]
-        ]
 
 
 viewOnSaleProperties : List OnSaleProperty -> Html msg
