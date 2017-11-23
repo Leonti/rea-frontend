@@ -166,8 +166,7 @@ subscriptions model =
     Sub.batch
         [ pageSubscriptions (getPage model.pageState)
         , Time.every (Time.second * 5) CurrentTime
-
-        --        , Sub.map SetUser sessionChange
+          --        , Sub.map SetUser sessionChange
         ]
 
 
@@ -282,27 +281,40 @@ setRoute model =
             Just (Route.Home Nothing) ->
                 transition HomeLoaded (Home.init model.session)
 
-            Just Route.Login ->
+            Just (Route.Login) ->
                 ( { model | pageState = Loaded Login }, Cmd.none )
 
-            Just Route.Sold ->
+            Just (Route.Sold) ->
                 transition SoldLoaded (Sold.init model.session)
 
-            Just Route.OnSale ->
+            Just (Route.OnSale) ->
                 let
                     ( cachedOnSaleState, cachedPropertiesCmd ) =
                         CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
                 in
                     ( { model
                         | cachedOnSaleState = cachedOnSaleState
-                        , pageState = Loaded (OnSale OnSale.initialModel)
+                        , pageState = Loaded (OnSale <| OnSale.initialModel Nothing)
                       }
                     , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
                     )
 
             --                    transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
             Just (Route.OnSaleForDate date) ->
-                transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
+                let
+                    ( cachedOnSaleState, cachedPropertiesCmd ) =
+                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
+                in
+                    ( { model
+                        | cachedOnSaleState = cachedOnSaleState
+                        , pageState = Loaded (OnSale <| OnSale.initialModel (Just date))
+                      }
+                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    )
+
+
+
+-- transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
 
 
 pageErrored : Model -> ActivePage -> String -> ( Model, Cmd msg )

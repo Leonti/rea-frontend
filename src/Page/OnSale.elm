@@ -1,4 +1,4 @@
-module Page.OnSale exposing (Model, Msg, initialModel, init, update, view, subscriptions)
+module Page.OnSale exposing (Model, Msg, initialModel, update, view, subscriptions)
 
 {-| The homepage. You can get here via either the / or /#/ routes.
 -}
@@ -6,15 +6,11 @@ module Page.OnSale exposing (Model, Msg, initialModel, init, update, view, subsc
 import Data.Session as Session exposing (Session)
 import Html exposing (..)
 import Date exposing (Date, fromTime)
+import Time.Date as LocalDate
 import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
-import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyDates)
-import Http
-import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
-import Request.OnSaleProperty
-import Task exposing (Task)
-import Views.Page as Page
+import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyDates, newForDate)
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
 import Time exposing (Time)
@@ -25,35 +21,14 @@ import Route as Route exposing (Route(..))
 
 
 type alias Model =
-    { onSaleProperties : List OnSaleProperty
-    , currentTime : Time
+    { selectedDate : Maybe LocalDate.Date
     }
 
 
-initialModel : Model
-initialModel =
-    { onSaleProperties = []
-    , currentTime = 0.0
+initialModel : Maybe LocalDate.Date -> Model
+initialModel selectedDate =
+    { selectedDate = selectedDate
     }
-
-
-init : Session -> Time -> Task PageLoadError Model
-init session currentTime =
-    let
-        loadOnSaleProperties =
-            Request.OnSaleProperty.all session.maybeAuthToken
-                |> Http.toTask
-
-        toModel properties =
-            { onSaleProperties = List.filter hasLocation properties
-            , currentTime = currentTime
-            }
-
-        handleLoadError _ =
-            pageLoadError Page.OnSale "Could not load on sale properties"
-    in
-        Task.map toModel loadOnSaleProperties
-            |> Task.mapError handleLoadError
 
 
 hasLocation : OnSaleProperty -> Bool
@@ -78,7 +53,7 @@ update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
         CurrentTime time ->
-            ( { model | currentTime = time }, Cmd.none )
+            ( model, Cmd.none )
 
 
 
@@ -88,15 +63,27 @@ update session msg model =
 view : Session -> Time -> Maybe (List OnSaleProperty) -> Model -> Html Msg
 view session currentTime maybeOnSaleProperties model =
     let
-        onSaleProperties =
+        propertiesWithLocation =
             List.filter hasLocation (Maybe.withDefault [] maybeOnSaleProperties)
+
+        onSaleProperties =
+            case model.selectedDate of
+                Just date ->
+                    newForDate propertiesWithLocation date
+
+                Nothing ->
+                    propertiesWithLocation
     in
         div [ class "home-page" ]
             [ div [ class "container" ]
                 [ div [ class "row" ]
+                    [ text <| toString model.selectedDate ]
+                , div [ class "row" ]
                     [ text <| toString currentTime ]
                 , div [ class "row" ]
-                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| toString d ]) (propertyDates onSaleProperties))
+                    [ text <| toString (List.length onSaleProperties) ]
+                , div [ class "row" ]
+                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| LocalDate.toISO8601 d ]) (propertyDates propertiesWithLocation))
                 , div [ class "row" ]
                     [ div [ class "col" ]
                         [ viewOnSaleProperties onSaleProperties

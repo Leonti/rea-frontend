@@ -1,4 +1,4 @@
-module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyDates)
+module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyDates, newForDate)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
@@ -51,6 +51,24 @@ propertyDates onSaleProperties =
             List.filterMap firstDate onSaleProperties
     in
         uniqueBy LocalDate.toTuple firstDates
+
+
+newForDate : List OnSaleProperty -> Date -> List OnSaleProperty
+newForDate onSaleProperties date =
+    List.filterMap (isForDate date) onSaleProperties
+
+
+isForDate : Date -> OnSaleProperty -> Maybe OnSaleProperty
+isForDate date onSaleProperty =
+    case firstDate onSaleProperty of
+        Just propertyDate ->
+            if propertyDate == date then
+                Just onSaleProperty
+            else
+                Nothing
+
+        Nothing ->
+            Nothing
 
 
 firstDate : OnSaleProperty -> Maybe Date

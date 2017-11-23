@@ -55,12 +55,20 @@ initialSoldState =
 
 initOrUpdateOnSale : CachedOnSaleState -> Session -> ( CachedOnSaleState, Cmd OnSaleMsg )
 initOrUpdateOnSale state session =
-    let
-        loadOnSaleProperties =
-            Request.OnSaleProperty.all session.maybeAuthToken
-                |> Http.toTask
-    in
-        ( Loading, Task.attempt OnSaleResult loadOnSaleProperties )
+    case state of
+        Loading ->
+            ( state, Cmd.none )
+
+        Loaded _ ->
+            ( state, Cmd.none )
+
+        _ ->
+            let
+                loadOnSaleProperties =
+                    Request.OnSaleProperty.all session.maybeAuthToken
+                        |> Http.toTask
+            in
+                ( Loading, Task.attempt OnSaleResult loadOnSaleProperties )
 
 
 onSale : CachedOnSaleState -> Maybe (List OnSaleProperty)
