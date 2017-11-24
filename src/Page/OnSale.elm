@@ -10,7 +10,7 @@ import Time.Date as LocalDate
 import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
-import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyDates, newForDate)
+import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyFirstDates, propertyDates, newForDate)
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
 import Time exposing (Time)
@@ -60,6 +60,11 @@ update session msg model =
 -- VIEW --
 
 
+isInLast : LocalDate.Date -> OnSaleProperty -> Bool
+isInLast date onSaleProperty =
+    List.member date <| propertyDates onSaleProperty
+
+
 view : Session -> Time -> Maybe (List OnSaleProperty) -> Model -> Html Msg
 view session currentTime maybeOnSaleProperties model =
     let
@@ -73,6 +78,20 @@ view session currentTime maybeOnSaleProperties model =
 
                 Nothing ->
                     propertiesWithLocation
+
+        sortedDates =
+            List.sortBy LocalDate.toTuple (propertyFirstDates propertiesWithLocation)
+
+        maybeLast =
+            List.head <| List.reverse sortedDates
+
+        onSalePropertiesView =
+            case maybeLast of
+                Just date ->
+                    viewOnSaleProperties date onSaleProperties
+
+                Nothing ->
+                    div [] []
     in
         div [ class "home-page" ]
             [ div [ class "container" ]
@@ -83,23 +102,25 @@ view session currentTime maybeOnSaleProperties model =
                 , div [ class "row" ]
                     [ text <| toString (List.length onSaleProperties) ]
                 , div [ class "row" ]
-                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| LocalDate.toISO8601 d ]) (propertyDates propertiesWithLocation))
+                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| LocalDate.toISO8601 d ])
+                        sortedDates
+                    )
                 , div [ class "row" ]
                     [ div [ class "col" ]
-                        [ viewOnSaleProperties onSaleProperties
+                        [ onSalePropertiesView
                         ]
                     ]
                 ]
             ]
 
 
-viewOnSaleProperties : List OnSaleProperty -> Html msg
-viewOnSaleProperties onSaleProperties =
-    div [ class "list-group" ] (List.map viewOnSaleProperty onSaleProperties)
+viewOnSaleProperties : LocalDate.Date -> List OnSaleProperty -> Html msg
+viewOnSaleProperties lastDate onSaleProperties =
+    div [ class "list-group" ] (List.map (viewOnSaleProperty lastDate) onSaleProperties)
 
 
-viewOnSaleProperty : OnSaleProperty -> Html msg
-viewOnSaleProperty onSaleProperty =
+viewOnSaleProperty : LocalDate.Date -> OnSaleProperty -> Html msg
+viewOnSaleProperty lastDate onSaleProperty =
     div
         [ class "list-group-item list-group-item-action flex-column align-items-start"
         ]
@@ -110,7 +131,7 @@ viewOnSaleProperty onSaleProperty =
             , a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ] [ text "Link" ]
             , viewPropertyDetails onSaleProperty
             , viewLastPrice onSaleProperty
-            , viewPropertyStats onSaleProperty
+            , viewPropertyStats lastDate onSaleProperty
             ]
         ]
 
@@ -134,8 +155,8 @@ viewLastPrice onSaleProperty =
         div [] [ text <| "$" ++ (toString lastPrice) ]
 
 
-viewPropertyStats : OnSaleProperty -> Html msg
-viewPropertyStats onSaleProperty =
+viewPropertyStats : LocalDate.Date -> OnSaleProperty -> Html msg
+viewPropertyStats lastDate onSaleProperty =
     let
         days =
             List.length onSaleProperty.datesPrices
@@ -151,8 +172,14 @@ viewPropertyStats onSaleProperty =
                 " SOLD for $" ++ salePrice ++ " on " ++ saleDate
             else
                 ""
+
+        notListed =
+            if isInLast lastDate onSaleProperty then
+                ""
+            else
+                " NOT LISTED"
     in
-        div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ]
+        div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ++ notListed ]
 
 
 viewPropertyDetails : OnSaleProperty -> Html msg

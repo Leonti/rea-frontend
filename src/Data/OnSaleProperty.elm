@@ -1,4 +1,4 @@
-module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyDates, newForDate)
+module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyFirstDates, propertyDates, newForDate)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
@@ -44,13 +44,22 @@ decoder =
         |> optional "distances" (Decode.nullable Distances.decoder) Nothing
 
 
-propertyDates : List OnSaleProperty -> List Date
-propertyDates onSaleProperties =
+propertyFirstDates : List OnSaleProperty -> List Date
+propertyFirstDates onSaleProperties =
     let
         firstDates =
             List.filterMap firstDate onSaleProperties
     in
         uniqueBy LocalDate.toTuple firstDates
+
+
+propertyDates : OnSaleProperty -> List Date
+propertyDates onSaleProperty =
+    let
+        timestamps =
+            List.map .timestamp onSaleProperty.datesPrices
+    in
+        List.map timestampToDate timestamps
 
 
 newForDate : List OnSaleProperty -> Date -> List OnSaleProperty
@@ -77,7 +86,12 @@ firstDate onSaleProperty =
         maybeFirstTimestamp =
             Maybe.map .timestamp <| List.head onSaleProperty.datesPrices
     in
-        Maybe.map (\t -> zeroedDate <| Date.fromTime (toFloat t * 1000)) maybeFirstTimestamp
+        Maybe.map timestampToDate maybeFirstTimestamp
+
+
+timestampToDate : Int -> Date
+timestampToDate t =
+    zeroedDate <| Date.fromTime (toFloat t * 1000)
 
 
 zeroedDate : Date.Date -> Date
