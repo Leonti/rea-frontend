@@ -96,15 +96,9 @@ view session currentTime maybeOnSaleProperties model =
         div [ class "home-page" ]
             [ div [ class "container" ]
                 [ div [ class "row" ]
-                    [ text <| toString model.selectedDate ]
-                , div [ class "row" ]
-                    [ text <| toString currentTime ]
-                , div [ class "row" ]
                     [ text <| toString (List.length onSaleProperties) ]
                 , div [ class "row" ]
-                    (List.map (\d -> a [ Route.href (OnSaleForDate d) ] [ text <| LocalDate.toISO8601 d ])
-                        sortedDates
-                    )
+                    (List.map dateLink sortedDates)
                 , div [ class "row" ]
                     [ div [ class "col" ]
                         [ onSalePropertiesView
@@ -112,6 +106,14 @@ view session currentTime maybeOnSaleProperties model =
                     ]
                 ]
             ]
+
+
+dateLink : LocalDate.Date -> Html msg
+dateLink date =
+    span []
+        [ a [ Route.href (OnSaleForDate date) ] [ text <| LocalDate.toISO8601 date ]
+        , span [] [ text "_" ]
+        ]
 
 
 viewOnSaleProperties : LocalDate.Date -> List OnSaleProperty -> Html msg

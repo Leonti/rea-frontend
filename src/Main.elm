@@ -29,7 +29,7 @@ type Page
     = Blank
     | NotFound
     | Errored PageLoadError
-    | Home Home.Model
+    | Home
     | Sold Sold.Model
     | OnSale OnSale.Model
     | Login
@@ -109,7 +109,7 @@ isValidAuthentication : Model -> Bool
 isValidAuthentication model =
     let
         maybeIsValid =
-            Maybe.map3 (\_ expiresAt currentTime -> (currentTime - 300) < expiresAt) model.session.maybeAuthToken model.session.maybeExpiresAt (Maybe.map inSeconds model.currentTime)
+            Maybe.map3 (\_ expiresAt currentTime -> (currentTime + 300) < expiresAt) model.session.maybeAuthToken model.session.maybeExpiresAt (Maybe.map inSeconds model.currentTime)
     in
         Maybe.withDefault False maybeIsValid
 
@@ -135,14 +135,13 @@ viewPage model isLoading page =
                 Html.text ""
                     |> frame Page.Other
 
+            Home ->
+                Home.view model.session
+                    |> frame Page.Home
+
             Errored subModel ->
                 Errored.view model.session subModel
                     |> frame Page.Other
-
-            Home subModel ->
-                Home.view model.session subModel
-                    |> frame Page.Home
-                    |> Html.map HomeMsg
 
             Sold subModel ->
                 Sold.view model.session subModel
@@ -198,10 +197,10 @@ pageSubscriptions page =
         Login ->
             Sub.none
 
-        NotFound ->
+        Home ->
             Sub.none
 
-        Home _ ->
+        NotFound ->
             Sub.none
 
         Sold _ ->
@@ -219,8 +218,6 @@ type Msg
     = InitialTime Time
     | CurrentTime Time
     | SetRoute (Maybe Route)
-    | HomeLoaded (Result PageLoadError Home.Model)
-    | HomeMsg Home.Msg
     | SoldLoaded (Result PageLoadError Sold.Model)
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
     | OnSaleMsg OnSale.Msg
@@ -270,16 +267,16 @@ setRoute model =
                         , session = updatedSession
                       }
                     , Cmd.batch
-                        [ Task.attempt HomeLoaded (Home.init model.session)
-                        , Storage.store
+                        [ Storage.store
                             { token = Just authToken
                             , expiresAt = maybeExpiresAt
                             }
+                        , Route.modifyUrl (Route.Home Nothing)
                         ]
                     )
 
             Just (Route.Home Nothing) ->
-                transition HomeLoaded (Home.init model.session)
+                ( { model | pageState = Loaded Home }, Cmd.none )
 
             Just (Route.Login) ->
                 ( { model | pageState = Loaded Login }, Cmd.none )
@@ -367,12 +364,6 @@ updatePage page msg model =
             ( SetRoute route, _ ) ->
                 setRoute { model | currentRoute = route }
 
-            ( HomeLoaded (Ok subModel), _ ) ->
-                ( { model | pageState = Loaded (Home subModel) }, Cmd.none )
-
-            ( HomeLoaded (Err error), _ ) ->
-                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
-
             ( SoldLoaded (Ok subModel), _ ) ->
                 ( { model | pageState = Loaded (Sold subModel) }, Cmd.none )
 
@@ -387,9 +378,6 @@ updatePage page msg model =
 
             ( OnSaleMsg subMsg, OnSale subModel ) ->
                 toPage OnSale OnSaleMsg (OnSale.update session) subMsg subModel
-
-            ( HomeMsg subMsg, Home subModel ) ->
-                toPage Home HomeMsg (Home.update session) subMsg subModel
 
             ( _, NotFound ) ->
                 -- Disregard incoming messages when we're on the
