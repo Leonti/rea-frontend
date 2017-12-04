@@ -136,7 +136,7 @@ viewPage model isLoading page =
                     |> frame Page.Other
 
             Home ->
-                Home.view model.session
+                Home.view (isValidAuthentication model)
                     |> frame Page.Home
 
             Errored subModel ->

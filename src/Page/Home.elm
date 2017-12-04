@@ -12,20 +12,30 @@ import Route as Route
 -- VIEW --
 
 
-view : Session -> Html msg
-view session =
+view : Bool -> Html msg
+view isLoggedIn =
     div [ class "home-page" ]
         [ viewBanner
         , div [ class "container page" ]
             [ div [ class "row" ]
                 [ div [ class "col-md-3" ]
-                    [ div []
-                        [ a [ Route.href Route.OnSale ] [ text "Properties on sale" ]
-                        ]
+                    [ viewLinksOrNotLoggedInMessage isLoggedIn
                     ]
                 ]
             ]
         ]
+
+
+viewLinksOrNotLoggedInMessage : Bool -> Html msg
+viewLinksOrNotLoggedInMessage isLoggedIn =
+    if isLoggedIn then
+        div []
+            [ a [ Route.href Route.OnSale ] [ text "Properties on sale" ]
+            ]
+    else
+        div []
+            [ text "Please login"
+            ]
 
 
 viewBanner : Html msg

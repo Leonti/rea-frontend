@@ -11,6 +11,7 @@ import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyFirstDates, propertyDates, newForDate)
+import Data.Distances as Distances exposing (Distances)
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
 import Time exposing (Time)
@@ -127,15 +128,34 @@ viewOnSaleProperty lastDate onSaleProperty =
         [ class "list-group-item list-group-item-action flex-column align-items-start"
         ]
         [ div [ class "d-flex w-100 justify-content-between" ]
-            [ h5 [ class "mb-1" ]
-                [ text (onSaleProperty.location) ]
+            [ viewPropertyHeader onSaleProperty
             , span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ]
-            , a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ] [ text "Link" ]
             , viewPropertyDetails onSaleProperty
             , viewLastPrice onSaleProperty
             , viewPropertyStats lastDate onSaleProperty
+            , viewPropertyDistances onSaleProperty
             ]
         ]
+
+
+viewPropertyHeader : OnSaleProperty -> Html msg
+viewPropertyHeader onSaleProperty =
+    let
+        badge =
+            if onSaleProperty.isSold then
+                span []
+                    [ span [] [ text " " ]
+                    , span [ class "badge badge-secondary" ] [ text "SOLD" ]
+                    ]
+            else
+                span [] []
+    in
+        a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ]
+            [ h5 [ class "mb-1" ]
+                [ text (onSaleProperty.location)
+                , badge
+                ]
+            ]
 
 
 formattedTimestamp : Int -> String
@@ -182,6 +202,28 @@ viewPropertyStats lastDate onSaleProperty =
                 " NOT LISTED"
     in
         div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ++ notListed ]
+
+
+viewPropertyDistances : OnSaleProperty -> Html msg
+viewPropertyDistances onSaleProperty =
+    case onSaleProperty.distances of
+        Just distances ->
+            viewDistances distances
+
+        Nothing ->
+            div [] []
+
+
+viewDistances : Distances -> Html msg
+viewDistances distances =
+    div []
+        [ div [] [ text <| "Aldi:" ++ (toString distances.toAldi) ]
+        , div [] [ text <| "Woolworth:" ++ (toString distances.toWoolworth) ]
+        , div [] [ text <| "Coles:" ++ (toString distances.toColes) ]
+        , div [] [ text <| "Train:" ++ (toString distances.toTrain) ]
+        , div [] [ text <| "Tram:" ++ (toString distances.toTram) ]
+        , div [] [ text <| "Bus:" ++ (toString distances.toBus) ]
+        ]
 
 
 viewPropertyDetails : OnSaleProperty -> Html msg
