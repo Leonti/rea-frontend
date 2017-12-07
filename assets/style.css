@@ -1,4 +1,13 @@
+.property-details {
+  margin-right: 2em;
+}
+
 .property-detail-icon {
   width: 28px;
   height: 28px;
+  vertical-align: middle;
+}
+
+.property-details-count {
+  font-size: 1.5em;
 }

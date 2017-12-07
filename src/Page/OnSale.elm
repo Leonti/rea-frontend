@@ -124,22 +124,39 @@ viewOnSaleProperties lastDate onSaleProperties =
 
 viewOnSaleProperty : LocalDate.Date -> OnSaleProperty -> Html msg
 viewOnSaleProperty lastDate onSaleProperty =
-    div
-        [ class "list-group-item list-group-item-action flex-column align-items-start"
-        ]
-        [ div [ class "d-flex w-100 justify-content-between" ]
-            [ viewPropertyHeader onSaleProperty
-            , span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ]
-            , viewPropertyDetails onSaleProperty
-            , viewLastPrice onSaleProperty
-            , viewPropertyStats lastDate onSaleProperty
-            , viewPropertyDistances onSaleProperty
+    let
+        isListed =
+            isInLast lastDate onSaleProperty
+    in
+        div
+            [ class "list-group-item list-group-item-action flex-column align-items-start"
             ]
-        ]
+            [ div [ class "row" ]
+                [ div [ class "col" ]
+                    [ viewPropertyHeader onSaleProperty isListed
+                    , viewPropertyDetails onSaleProperty
+                    , viewPropertyStats onSaleProperty
+                    , viewPropertyDistances onSaleProperty
+                    ]
+                ]
+            ]
 
 
-viewPropertyHeader : OnSaleProperty -> Html msg
-viewPropertyHeader onSaleProperty =
+viewNotListedBadge : Bool -> Html msg
+viewNotListedBadge isListed =
+    case isListed of
+        True ->
+            span [] []
+
+        False ->
+            span []
+                [ span [] [ text " " ]
+                , span [ class "badge badge-secondary" ] [ text "NOT LISTED" ]
+                ]
+
+
+viewPropertyHeader : OnSaleProperty -> Bool -> Html msg
+viewPropertyHeader onSaleProperty isListed =
     let
         badge =
             if onSaleProperty.isSold then
@@ -148,13 +165,26 @@ viewPropertyHeader onSaleProperty =
                     , span [ class "badge badge-secondary" ] [ text "SOLD" ]
                     ]
             else
-                span [] []
+                viewNotListedBadge isListed
+
+        days =
+            List.length onSaleProperty.datesPrices
     in
-        a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ]
-            [ h5 [ class "mb-1" ]
-                [ text (onSaleProperty.location)
-                , badge
+        div [ class "row" ]
+            [ div [ class "col-6" ]
+                [ a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ]
+                    [ h5 [ class "mb-1" ]
+                        [ text (onSaleProperty.location)
+                        , badge
+                        ]
+                    ]
                 ]
+            , div [ class "col" ]
+                [ span [] [ text <| (toString days) ++ " days on sale" ] ]
+            , div [ class "col" ]
+                [ span [ class "text-muted" ] [ text <| formattedTimestamp onSaleProperty.extractedAt ] ]
+            , div [ class "col" ]
+                [ div [ class "float-right" ] [ viewLastPrice onSaleProperty ] ]
             ]
 
 
@@ -174,15 +204,12 @@ viewLastPrice onSaleProperty =
         lastPrice =
             Maybe.withDefault 0 <| Maybe.map .price (List.head <| List.sortBy .timestamp onSaleProperty.datesPrices)
     in
-        div [] [ text <| "$" ++ (toString lastPrice) ]
+        span [] [ text <| "$" ++ (toString lastPrice) ]
 
 
-viewPropertyStats : LocalDate.Date -> OnSaleProperty -> Html msg
-viewPropertyStats lastDate onSaleProperty =
+viewPropertyStats : OnSaleProperty -> Html msg
+viewPropertyStats onSaleProperty =
     let
-        days =
-            List.length onSaleProperty.datesPrices
-
         salePrice =
             toString <| Maybe.withDefault 0 onSaleProperty.salePrice
 
@@ -194,14 +221,8 @@ viewPropertyStats lastDate onSaleProperty =
                 " SOLD for $" ++ salePrice ++ " on " ++ saleDate
             else
                 ""
-
-        notListed =
-            if isInLast lastDate onSaleProperty then
-                ""
-            else
-                " NOT LISTED"
     in
-        div [] [ text <| "On sale for " ++ (toString days) ++ " days" ++ sold ++ notListed ]
+        div [] [ text sold ]
 
 
 viewPropertyDistances : OnSaleProperty -> Html msg
@@ -216,25 +237,31 @@ viewPropertyDistances onSaleProperty =
 
 viewDistances : Distances -> Html msg
 viewDistances distances =
-    div []
-        [ div [] [ text <| "Aldi:" ++ (toString distances.toAldi) ]
-        , div [] [ text <| "Woolworth:" ++ (toString distances.toWoolworth) ]
-        , div [] [ text <| "Coles:" ++ (toString distances.toColes) ]
-        , div [] [ text <| "Train:" ++ (toString distances.toTrain) ]
-        , div [] [ text <| "Tram:" ++ (toString distances.toTram) ]
-        , div [] [ text <| "Bus:" ++ (toString distances.toBus) ]
+    div [ class "row" ]
+        [ div [ class "col" ] [ text <| "Aldi: " ++ (toString distances.toAldi) ]
+        , div [ class "col" ] [ text <| "Woolworth: " ++ (toString distances.toWoolworth) ]
+        , div [ class "col" ] [ text <| "Coles: " ++ (toString distances.toColes) ]
+        , div [ class "col" ] [ text <| "Train: " ++ (toString distances.toTrain) ]
+        , div [ class "col" ] [ text <| "Tram: " ++ (toString distances.toTram) ]
+        , div [ class "col" ] [ text <| "Bus: " ++ (toString distances.toBus) ]
         ]
 
 
 viewPropertyDetails : OnSaleProperty -> Html msg
 viewPropertyDetails onSaleProperty =
     div []
-        [ svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-bed" ] [] ]
-        , span [] [ text <| toString onSaleProperty.bedrooms ]
-        , svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-shower" ] [] ]
-        , span [] [ text <| toString onSaleProperty.bathrooms ]
-        , svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-car" ] [] ]
-        , span [] [ text <| toString onSaleProperty.cars ]
+        [ span [ class "property-details" ]
+            [ svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-bed" ] [] ]
+            , span [ class "property-details-count" ] [ text <| " " ++ toString onSaleProperty.bedrooms ]
+            ]
+        , span [ class "property-details" ]
+            [ svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-shower" ] [] ]
+            , span [ class "property-details-count" ] [ text <| " " ++ toString onSaleProperty.bathrooms ]
+            ]
+        , span [ class "property-details" ]
+            [ svg [ Svg.Attributes.class "property-detail-icon" ] [ use [ xlinkHref "assets/sprite.svg#si-glyph-car" ] [] ]
+            , span [ class "property-details-count" ] [ text <| " " ++ toString onSaleProperty.cars ]
+            ]
         ]
 
 
