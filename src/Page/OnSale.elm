@@ -5,6 +5,8 @@ module Page.OnSale exposing (Model, Msg, initialModel, update, view, subscriptio
 
 import Data.Session as Session exposing (Session)
 import Html exposing (..)
+import Html.Events exposing (on)
+import Html.Attributes exposing (value, selected)
 import Date exposing (Date, fromTime)
 import Time.Date as LocalDate
 import Svg exposing (svg, use)
@@ -16,6 +18,7 @@ import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
 import Time exposing (Time)
 import Route as Route exposing (Route(..))
+import Json.Decode as Json
 
 
 -- MODEL --
@@ -48,6 +51,7 @@ hasLocation onSaleProperty =
 
 type Msg
     = CurrentTime Time
+    | SetDate String
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
@@ -55,6 +59,14 @@ update session msg model =
     case msg of
         CurrentTime time ->
             ( model, Cmd.none )
+
+        SetDate dateAsString ->
+            case LocalDate.fromISO8601 dateAsString of
+                Ok date ->
+                    ( { model | selectedDate = Just date }, Route.modifyUrl (Route.OnSaleForDate date) )
+
+                Err _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -97,16 +109,37 @@ view session currentTime maybeOnSaleProperties model =
         div [ class "home-page" ]
             [ div [ class "container" ]
                 [ div [ class "row" ]
-                    [ text <| toString (List.length onSaleProperties) ]
-                , div [ class "row" ]
-                    (List.map dateLink sortedDates)
+                    [ div [ class "col" ]
+                        [ text <| toString (List.length onSaleProperties) ++ " properties" ]
+                    ]
                 , div [ class "row" ]
                     [ div [ class "col" ]
-                        [ onSalePropertiesView
+                        [ dateSelector model.selectedDate sortedDates
+                        , onSalePropertiesView
                         ]
                     ]
                 ]
             ]
+
+
+dateSelector : Maybe LocalDate.Date -> List LocalDate.Date -> Html Msg
+dateSelector maybeSelectedDate localDates =
+    select [ on "change" (Json.map SetDate targetValueString) ]
+        (List.map (dateOption maybeSelectedDate) localDates)
+
+
+targetValueString : Json.Decoder String
+targetValueString =
+    Json.at [ "target", "value" ] Json.string
+
+
+dateOption : Maybe LocalDate.Date -> LocalDate.Date -> Html msg
+dateOption maybeSelectedDate localDate =
+    let
+        isSelected =
+            Maybe.withDefault False <| Maybe.map (\selectedDate -> selectedDate == localDate) maybeSelectedDate
+    in
+        option [ value (LocalDate.toISO8601 localDate), selected isSelected ] [ text (LocalDate.toISO8601 localDate) ]
 
 
 dateLink : LocalDate.Date -> Html msg
@@ -134,8 +167,8 @@ viewOnSaleProperty lastDate onSaleProperty =
             [ div [ class "row" ]
                 [ div [ class "col" ]
                     [ viewPropertyHeader onSaleProperty isListed
+                    , viewSoldDetails onSaleProperty
                     , viewPropertyDetails onSaleProperty
-                    , viewPropertyStats onSaleProperty
                     , viewPropertyDistances onSaleProperty
                     ]
                 ]
@@ -171,7 +204,7 @@ viewPropertyHeader onSaleProperty isListed =
             List.length onSaleProperty.datesPrices
     in
         div [ class "row" ]
-            [ div [ class "col-6" ]
+            [ div [ class "col-7" ]
                 [ a [ href <| "https://realestate.com.au" ++ onSaleProperty.link ]
                     [ h5 [ class "mb-1" ]
                         [ text (onSaleProperty.location)
@@ -207,22 +240,27 @@ viewLastPrice onSaleProperty =
         span [] [ text <| "$" ++ (toString lastPrice) ]
 
 
-viewPropertyStats : OnSaleProperty -> Html msg
-viewPropertyStats onSaleProperty =
-    let
-        salePrice =
-            toString <| Maybe.withDefault 0 onSaleProperty.salePrice
+viewSoldDetails : OnSaleProperty -> Html msg
+viewSoldDetails onSaleProperty =
+    if onSaleProperty.isSold then
+        let
+            salePrice =
+                toString <| Maybe.withDefault 0 onSaleProperty.salePrice
 
-        saleDate =
-            Maybe.withDefault "" (Maybe.map formattedTimestamp onSaleProperty.soldAt)
-
-        sold =
-            if onSaleProperty.isSold then
-                " SOLD for $" ++ salePrice ++ " on " ++ saleDate
-            else
-                ""
-    in
-        div [] [ text sold ]
+            saleDate =
+                Maybe.withDefault "" (Maybe.map formattedTimestamp onSaleProperty.soldAt)
+        in
+            div [ class "row" ]
+                [ div [ class "col-7" ] []
+                , div [ class "col" ]
+                    [ text "Sold on" ]
+                , div [ class "col" ]
+                    [ span [ class "text-muted" ] [ text saleDate ] ]
+                , div [ class "col" ]
+                    [ div [ class "float-right" ] [ text <| "$" ++ salePrice ] ]
+                ]
+    else
+        div [] []
 
 
 viewPropertyDistances : OnSaleProperty -> Html msg
