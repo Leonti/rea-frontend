@@ -291,7 +291,7 @@ setRoute model =
                 in
                     ( { model
                         | cachedOnSaleState = cachedOnSaleState
-                        , pageState = Loaded (OnSale <| OnSale.initialModel Nothing)
+                        , pageState = Loaded (OnSale <| OnSale.initialModel Nothing Nothing)
                       }
                     , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
                     )
@@ -304,7 +304,19 @@ setRoute model =
                 in
                     ( { model
                         | cachedOnSaleState = cachedOnSaleState
-                        , pageState = Loaded (OnSale <| OnSale.initialModel (Just date))
+                        , pageState = Loaded (OnSale <| OnSale.initialModel (Just date) Nothing)
+                      }
+                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    )
+
+            Just (Route.OnSaleForDateExpanded maybeDate propertyId) ->
+                let
+                    ( cachedOnSaleState, cachedPropertiesCmd ) =
+                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
+                in
+                    ( { model
+                        | cachedOnSaleState = cachedOnSaleState
+                        , pageState = Loaded (OnSale <| OnSale.initialModel maybeDate (Just propertyId))
                       }
                     , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
                     )

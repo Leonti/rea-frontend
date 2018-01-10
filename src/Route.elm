@@ -18,6 +18,7 @@ type Route
     | Sold
     | OnSale
     | OnSaleForDate Date
+    | OnSaleForDateExpanded (Maybe Date) String
 
 
 accessTokenParser : Parser (AuthToken -> a) a
@@ -43,6 +44,16 @@ dateParser =
     custom "DATE_PARSER" fromISO8601
 
 
+maybeDateParser : Parser (Maybe Date -> a) a
+maybeDateParser =
+    Url.map Just dateParser
+
+
+onSaleExpandedWithoutDate : String -> Route
+onSaleExpandedWithoutDate =
+    OnSaleForDateExpanded Nothing
+
+
 route : Parser (Route -> a) a
 route =
     oneOf
@@ -50,7 +61,9 @@ route =
         , Url.map (Home Nothing) (s "")
         , Url.map Login (s "login")
         , Url.map Sold (s "sold")
+        , Url.map OnSaleForDateExpanded (s "on-sale" </> maybeDateParser </> string)
         , Url.map OnSaleForDate (s "on-sale" </> dateParser)
+        , Url.map onSaleExpandedWithoutDate (s "on-sale" </> string)
         , Url.map OnSale (s "on-sale")
         ]
 
@@ -80,6 +93,14 @@ routeToString page =
 
                 OnSale ->
                     [ "on-sale" ]
+
+                OnSaleForDateExpanded maybeSelectedDate propertyId ->
+                    case maybeSelectedDate of
+                        Just date ->
+                            [ "on-sale", toISO8601 date, String.dropLeft 1 propertyId ]
+
+                        Nothing ->
+                            [ "on-sale", String.dropLeft 1 propertyId ]
 
                 OnSaleForDate date ->
                     [ "on-sale", toISO8601 date ]

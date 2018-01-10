@@ -26,12 +26,14 @@ import Json.Decode as Json
 
 type alias Model =
     { selectedDate : Maybe LocalDate.Date
+    , selectedId : Maybe String
     }
 
 
-initialModel : Maybe LocalDate.Date -> Model
-initialModel selectedDate =
+initialModel : Maybe LocalDate.Date -> Maybe String -> Model
+initialModel selectedDate selectedId =
     { selectedDate = selectedDate
+    , selectedId = selectedId
     }
 
 
@@ -101,7 +103,7 @@ view session currentTime maybeOnSaleProperties model =
         onSalePropertiesView =
             case maybeLast of
                 Just date ->
-                    viewOnSaleProperties date onSaleProperties
+                    viewOnSaleProperties model.selectedDate date onSaleProperties
 
                 Nothing ->
                     div [] []
@@ -111,6 +113,10 @@ view session currentTime maybeOnSaleProperties model =
                 [ div [ class "row" ]
                     [ div [ class "col" ]
                         [ text <| toString (List.length onSaleProperties) ++ " properties" ]
+                    ]
+                , div [ class "row" ]
+                    [ div [ class "col" ]
+                        [ text <| "Selected property:" ++ toString model.selectedId ]
                     ]
                 , div [ class "row" ]
                     [ div [ class "col" ]
@@ -142,21 +148,20 @@ dateOption maybeSelectedDate localDate =
         option [ value (LocalDate.toISO8601 localDate), selected isSelected ] [ text (LocalDate.toISO8601 localDate) ]
 
 
-dateLink : LocalDate.Date -> Html msg
-dateLink date =
-    span []
-        [ a [ Route.href (OnSaleForDate date) ] [ text <| LocalDate.toISO8601 date ]
-        , span [] [ text "_" ]
+propertyLink : Maybe LocalDate.Date -> String -> Html msg
+propertyLink maybeSelectedDate propertyId =
+    div []
+        [ a [ Route.href (OnSaleForDateExpanded maybeSelectedDate propertyId) ] [ text "Details" ]
         ]
 
 
-viewOnSaleProperties : LocalDate.Date -> List OnSaleProperty -> Html msg
-viewOnSaleProperties lastDate onSaleProperties =
-    div [ class "list-group" ] (List.map (viewOnSaleProperty lastDate) onSaleProperties)
+viewOnSaleProperties : Maybe LocalDate.Date -> LocalDate.Date -> List OnSaleProperty -> Html msg
+viewOnSaleProperties maybeSelectedDate lastDate onSaleProperties =
+    div [ class "list-group" ] (List.map (viewOnSaleProperty maybeSelectedDate lastDate) onSaleProperties)
 
 
-viewOnSaleProperty : LocalDate.Date -> OnSaleProperty -> Html msg
-viewOnSaleProperty lastDate onSaleProperty =
+viewOnSaleProperty : Maybe LocalDate.Date -> LocalDate.Date -> OnSaleProperty -> Html msg
+viewOnSaleProperty maybeSelectedDate lastDate onSaleProperty =
     let
         isListed =
             isInLast lastDate onSaleProperty
@@ -170,6 +175,7 @@ viewOnSaleProperty lastDate onSaleProperty =
                     , viewSoldDetails onSaleProperty
                     , viewPropertyDetails onSaleProperty
                     , viewPropertyDistances onSaleProperty
+                    , propertyLink maybeSelectedDate onSaleProperty.link
                     ]
                 ]
             ]
