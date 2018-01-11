@@ -11,8 +11,9 @@ import Date exposing (Date, fromTime)
 import Time.Date as LocalDate
 import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
-import Html.Attributes exposing (attribute, class, classList, href, id, placeholder)
+import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyFirstDates, propertyDates, newForDate)
+import Data.DatePrice as DatePrice exposing (DatePrice)
 import Data.Distances as Distances exposing (Distances)
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
@@ -107,9 +108,17 @@ view session currentTime maybeOnSaleProperties model =
 
                 Nothing ->
                     div [] []
+
+        detailsView =
+            case Maybe.andThen (findProperty onSaleProperties) model.selectedId of
+                Just selectedProperty ->
+                    propertyDetailsView selectedProperty
+
+                Nothing ->
+                    summaryView onSaleProperties
     in
         div [ class "home-page" ]
-            [ div [ class "container" ]
+            [ div [ class "container-fluid" ]
                 [ div [ class "row" ]
                     [ div [ class "col" ]
                         [ text <| toString (List.length onSaleProperties) ++ " properties" ]
@@ -123,9 +132,56 @@ view session currentTime maybeOnSaleProperties model =
                         [ dateSelector model.selectedDate sortedDates
                         , onSalePropertiesView
                         ]
+                    , div [ class "col" ]
+                        [ detailsView
+                        ]
                     ]
                 ]
             ]
+
+
+findProperty : List OnSaleProperty -> String -> Maybe OnSaleProperty
+findProperty properties propertyId =
+    List.head <| List.filter (\p -> p.link == "/" ++ propertyId) properties
+
+
+propertyDetailsView : OnSaleProperty -> Html Msg
+propertyDetailsView property =
+    div [ class "row" ]
+        [ div [ class "col" ]
+            [ div []
+                [ span [] [ text property.location ] ]
+            , priceChartView property.datesPrices
+            ]
+        ]
+
+
+priceChartView : List DatePrice -> Html Msg
+priceChartView datePrices =
+    let
+        chartUrl =
+            "https://chart.googleapis.com/chart?cht=lc&chs=800x150&chd=t:" ++ (chartPrices datePrices) ++ "&chds=a&chxt=y&chxs=1,0000ff,10,1,lt"
+    in
+        div []
+            [ img [ src chartUrl ] []
+            ]
+
+
+chartPrices : List DatePrice -> String
+chartPrices datePrices =
+    let
+        stringDates =
+            List.map (toString << .price) datePrices
+    in
+        String.join "," stringDates
+
+
+summaryView : List OnSaleProperty -> Html Msg
+summaryView properties =
+    div [ class "row" ]
+        [ div [ class "col" ]
+            [ span [] [ text <| "Total properties count: " ++ toString (List.length properties) ] ]
+        ]
 
 
 dateSelector : Maybe LocalDate.Date -> List LocalDate.Date -> Html Msg
