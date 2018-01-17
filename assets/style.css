@@ -11,3 +11,14 @@
 .property-details-count {
   font-size: 1.5em;
 }
+
+.property-list-wrapper {
+  height: calc(100vh - 150px);
+  overflow-y: scroll;
+}
+
+.property-map iframe {
+  border: none;
+  width: 100%;
+  height: 500px;
+}

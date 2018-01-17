@@ -9,6 +9,7 @@ import Html.Events exposing (on)
 import Html.Attributes exposing (value, selected)
 import Date exposing (Date, fromTime)
 import Time.Date as LocalDate
+import Http exposing (encodeUri)
 import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src)
@@ -125,10 +126,6 @@ view session currentTime maybeOnSaleProperties model =
                     ]
                 , div [ class "row" ]
                     [ div [ class "col" ]
-                        [ text <| "Selected property:" ++ toString model.selectedId ]
-                    ]
-                , div [ class "row" ]
-                    [ div [ class "col" ]
                         [ dateSelector model.selectedDate sortedDates
                         , onSalePropertiesView
                         ]
@@ -152,8 +149,23 @@ propertyDetailsView property =
             [ div []
                 [ span [] [ text property.location ] ]
             , priceChartView property.datesPrices
+            , propertyMap property.location
             ]
         ]
+
+
+propertyMap : String -> Html Msg
+propertyMap location =
+    let
+        encoded =
+            encodeUri <| location ++ ", Australia"
+
+        iframeSrc =
+            "https://www.google.com/maps/embed/v1/place?key=AIzaSyCZ4yEZDvm3tUTl1Kz5xfmlNi93iio3-gY&q=" ++ encoded
+    in
+        div [ class "property-map" ]
+            [ iframe [ src iframeSrc ] []
+            ]
 
 
 priceChartView : List DatePrice -> Html Msg
@@ -213,7 +225,9 @@ propertyLink maybeSelectedDate propertyId =
 
 viewOnSaleProperties : Maybe LocalDate.Date -> LocalDate.Date -> List OnSaleProperty -> Html msg
 viewOnSaleProperties maybeSelectedDate lastDate onSaleProperties =
-    div [ class "list-group" ] (List.map (viewOnSaleProperty maybeSelectedDate lastDate) onSaleProperties)
+    div [ class "property-list-wrapper" ]
+        [ div [ class "list-group" ] (List.map (viewOnSaleProperty maybeSelectedDate lastDate) onSaleProperties)
+        ]
 
 
 viewOnSaleProperty : Maybe LocalDate.Date -> LocalDate.Date -> OnSaleProperty -> Html msg
