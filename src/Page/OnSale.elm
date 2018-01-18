@@ -18,6 +18,7 @@ import Data.DatePrice as DatePrice exposing (DatePrice)
 import Data.Distances as Distances exposing (Distances)
 import Date.Extra.Config.Config_en_au exposing (config)
 import Date.Extra.Format as Format exposing (format)
+import Data.Stats exposing (medianPrices, medianPriceForDate)
 import Time exposing (Time)
 import Route as Route exposing (Route(..))
 import Json.Decode as Json
@@ -116,7 +117,7 @@ view session currentTime maybeOnSaleProperties model =
                     propertyDetailsView selectedProperty
 
                 Nothing ->
-                    summaryView onSaleProperties
+                    summaryView onSaleProperties model.selectedDate
     in
         div [ class "home-page" ]
             [ div [ class "container-fluid" ]
@@ -188,12 +189,18 @@ chartPrices datePrices =
         String.join "," stringDates
 
 
-summaryView : List OnSaleProperty -> Html Msg
-summaryView properties =
-    div [ class "row" ]
-        [ div [ class "col" ]
-            [ span [] [ text <| "Total properties count: " ++ toString (List.length properties) ] ]
-        ]
+summaryView : List OnSaleProperty -> Maybe LocalDate.Date -> Html Msg
+summaryView onSaleProperties maybeSelectedDate =
+    let
+        medianPrice =
+            Maybe.map (medianPriceForDate onSaleProperties) maybeSelectedDate
+    in
+        div [ class "row" ]
+            [ div [ class "col" ]
+                [ span [] [ text <| "Total properties count: " ++ toString (List.length onSaleProperties) ]
+                , span [] [ text <| " Median price: " ++ toString (Maybe.withDefault 0 medianPrice) ]
+                ]
+            ]
 
 
 dateSelector : Maybe LocalDate.Date -> List LocalDate.Date -> Html Msg

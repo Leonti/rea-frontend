@@ -1,4 +1,4 @@
-module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyFirstDates, propertyDates, newForDate)
+module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyFirstDates, propertyDates, newForDate, priceForDate)
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
@@ -87,6 +87,16 @@ firstDate onSaleProperty =
             Maybe.map .timestamp <| List.head onSaleProperty.datesPrices
     in
         Maybe.map timestampToDate maybeFirstTimestamp
+
+
+priceForDate : Date -> OnSaleProperty -> Maybe Int
+priceForDate date onSaleProperty =
+    Maybe.map .price <| List.Extra.find (dateMatch date) onSaleProperty.datesPrices
+
+
+dateMatch : Date -> DatePrice -> Bool
+dateMatch date datePrice =
+    date == timestampToDate datePrice.timestamp
 
 
 timestampToDate : Int -> Date
