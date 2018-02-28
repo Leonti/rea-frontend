@@ -15,9 +15,10 @@ module CachedProperties
 import Data.Session as Session exposing (Session)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
 import Data.SoldProperty as SoldProperty exposing (SoldProperty)
-import Request.OnSaleProperty
+import Request.OnSaleProperty as OnSalePropertyRequest
 import Task exposing (Task)
-import Http
+import Debug
+import GraphQL.Client.Http as GraphQLClient
 
 
 type alias CachedOnSaleState =
@@ -36,11 +37,11 @@ type LoadingState a
 
 
 type OnSaleMsg
-    = OnSaleResult (Result Http.Error (List OnSaleProperty))
+    = OnSaleResult (Result (List String) (List OnSaleProperty))
 
 
 type SoldMsg
-    = SoldResult (Result Http.Error (List SoldProperty))
+    = SoldResult (Result (List String) (List SoldProperty))
 
 
 initialOnSaleState : CachedOnSaleState
@@ -65,10 +66,14 @@ initOrUpdateOnSale state session =
         _ ->
             let
                 loadOnSaleProperties =
-                    Request.OnSaleProperty.all session.maybeAuthToken
-                        |> Http.toTask
+                    OnSalePropertyRequest.allGraphQl session.maybeAuthToken
             in
-                ( Loading, Task.attempt OnSaleResult loadOnSaleProperties )
+                ( Loading, Task.attempt OnSaleResult <| Task.mapError transformError loadOnSaleProperties )
+
+
+transformError : GraphQLClient.Error -> List String
+transformError error =
+    [ Debug.log "graphql error" <| toString error ]
 
 
 onSale : CachedOnSaleState -> Maybe (List OnSaleProperty)

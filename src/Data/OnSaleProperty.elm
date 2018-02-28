@@ -1,4 +1,13 @@
-module Data.OnSaleProperty exposing (OnSaleProperty, decoder, propertyFirstDates, propertyDates, newForDate, priceForDate)
+module Data.OnSaleProperty
+    exposing
+        ( OnSaleProperty
+        , decoder
+        , propertyFirstDates
+        , propertyDates
+        , newForDate
+        , priceForDate
+        , graphQlSpec
+        )
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required, optional)
@@ -9,6 +18,7 @@ import Date exposing (year, month, day)
 import Time.Date as LocalDate exposing (Date, date)
 import Date.Extra.Core exposing (monthToInt)
 import List.Extra exposing (uniqueBy)
+import GraphQL.Request.Builder exposing (..)
 
 
 type alias OnSaleProperty =
@@ -25,6 +35,23 @@ type alias OnSaleProperty =
     , geo : Maybe Geo
     , distances : Maybe Distances
     }
+
+
+graphQlSpec : ValueSpec NonNull ObjectType OnSaleProperty vars
+graphQlSpec =
+    object OnSaleProperty
+        |> with (field "location" [] string)
+        |> with (field "link" [] string)
+        |> with (field "bathrooms" [] int)
+        |> with (field "bedrooms" [] int)
+        |> with (field "cars" [] int)
+        |> with (field "extractedAt" [] int)
+        |> with (field "isSold" [] bool)
+        |> with (field "soldAt" [] (nullable int))
+        |> with (field "salePrice" [] (nullable int))
+        |> with (field "datesPrices" [] (list DatePrice.graphQlSpec))
+        |> with (field "geo" [] (nullable Geo.graphQlSpec))
+        |> with (field "distances" [] (nullable Distances.graphQlSpec))
 
 
 decoder : Decoder OnSaleProperty

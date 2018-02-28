@@ -1,6 +1,7 @@
-module Data.AuthToken exposing (AuthToken, decoder, encode, withAuthorization, extractAccessToken)
+module Data.AuthToken exposing (AuthToken, decoder, encode, withAuthorization, authorizationHeaders, extractAccessToken)
 
 import HttpBuilder exposing (RequestBuilder, withHeader)
+import Http exposing (Header)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 import Json.Encode as Encode exposing (Value)
@@ -37,6 +38,16 @@ withAuthorization maybeToken builder =
 
         Nothing ->
             builder
+
+
+authorizationHeaders : Maybe AuthToken -> List Header
+authorizationHeaders maybeToken =
+    case maybeToken of
+        Just authToken ->
+            [ Http.header "authorization" ("Bearer " ++ authToken.token) ]
+
+        Nothing ->
+            []
 
 
 extractAccessToken : String -> Maybe ( String, Int )
