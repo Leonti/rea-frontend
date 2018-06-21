@@ -1,21 +1,25 @@
 module CachedProperties
     exposing
         ( CachedOnSaleState
-        , CachedSoldState
+        , CachedDateCountsState
         , OnSaleMsg
-        , SoldMsg
+        , DateCountsMsg
         , initialOnSaleState
-        , initialSoldState
         , updateOnSale
-        , updateSold
         , initOrUpdateOnSale
+        , updateDateCounts
+        , initOrUpdateDateCounts
+        , initialDateCountsState
         , onSale
+        , dateCounts
         )
 
 import Data.Session as Session exposing (Session)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty)
-import Data.SoldProperty as SoldProperty exposing (SoldProperty)
+import Data.DateCount as DateCount exposing (DateCount)
+import Time.Date as LocalDate
 import Request.OnSaleProperty as OnSalePropertyRequest
+import Request.DateCount as DateCountRequest
 import Task exposing (Task)
 import Debug
 import GraphQL.Client.Http as GraphQLClient
@@ -25,8 +29,8 @@ type alias CachedOnSaleState =
     LoadingState (List OnSaleProperty)
 
 
-type alias CachedSoldState =
-    LoadingState (List SoldProperty)
+type alias CachedDateCountsState =
+    LoadingState (List DateCount)
 
 
 type LoadingState a
@@ -40,8 +44,8 @@ type OnSaleMsg
     = OnSaleResult (Result (List String) (List OnSaleProperty))
 
 
-type SoldMsg
-    = SoldResult (Result (List String) (List SoldProperty))
+type DateCountsMsg
+    = DateCountsResult (Result (List String) (List DateCount))
 
 
 initialOnSaleState : CachedOnSaleState
@@ -49,13 +53,27 @@ initialOnSaleState =
     NotLoaded
 
 
-initialSoldState : CachedSoldState
-initialSoldState =
+initialDateCountsState : CachedDateCountsState
+initialDateCountsState =
     NotLoaded
 
 
-initOrUpdateOnSale : CachedOnSaleState -> Session -> ( CachedOnSaleState, Cmd OnSaleMsg )
-initOrUpdateOnSale state session =
+initOrUpdateOnSale : Session -> Maybe LocalDate.Date -> Cmd OnSaleMsg
+initOrUpdateOnSale session maybeDate =
+    case ( session.maybeAuthToken, maybeDate ) of
+        ( Just authToken, Just date ) ->
+            let
+                loadOnSaleProperties =
+                    OnSalePropertyRequest.forDateGraphQl date authToken
+            in
+                Task.attempt OnSaleResult <| Task.mapError transformError loadOnSaleProperties
+
+        _ ->
+            Cmd.none
+
+
+initOrUpdateDateCounts : CachedDateCountsState -> Session -> ( CachedDateCountsState, Cmd DateCountsMsg )
+initOrUpdateDateCounts state session =
     case state of
         Loading ->
             ( state, Cmd.none )
@@ -65,10 +83,10 @@ initOrUpdateOnSale state session =
 
         _ ->
             let
-                loadOnSaleProperties =
-                    OnSalePropertyRequest.allGraphQl session.maybeAuthToken
+                loadDateCounts =
+                    DateCountRequest.allGraphQl session.maybeAuthToken
             in
-                ( Loading, Task.attempt OnSaleResult <| Task.mapError transformError loadOnSaleProperties )
+                ( Loading, Task.attempt DateCountsResult <| Task.mapError transformError loadDateCounts )
 
 
 transformError : GraphQLClient.Error -> List String
@@ -86,6 +104,16 @@ onSale state =
             Nothing
 
 
+dateCounts : CachedDateCountsState -> Maybe (List DateCount)
+dateCounts state =
+    case state of
+        Loaded dateCounts ->
+            Just dateCounts
+
+        _ ->
+            Nothing
+
+
 updateOnSale : CachedOnSaleState -> OnSaleMsg -> CachedOnSaleState
 updateOnSale state msg =
     case msg of
@@ -96,11 +124,11 @@ updateOnSale state msg =
             Failed "Failed to load on sale properties"
 
 
-updateSold : CachedSoldState -> SoldMsg -> CachedSoldState
-updateSold state msg =
+updateDateCounts : CachedDateCountsState -> DateCountsMsg -> CachedDateCountsState
+updateDateCounts state msg =
     case msg of
-        SoldResult (Ok sold) ->
-            Loaded sold
+        DateCountsResult (Ok dateCounts) ->
+            Loaded dateCounts
 
-        SoldResult (Err _) ->
-            Failed "Failed to load sold properties"
+        DateCountsResult (Err _) ->
+            Failed "Failed to load on sale properties"

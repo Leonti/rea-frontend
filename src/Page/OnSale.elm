@@ -14,6 +14,7 @@ import Svg exposing (svg, use)
 import Svg.Attributes exposing (xlinkHref)
 import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, propertyFirstDates, propertyDates, newForDate)
+import Data.DateCount as DateCount exposing (DateCount)
 import Data.DatePrice as DatePrice exposing (DatePrice)
 import Data.Distances as Distances exposing (Distances)
 import Date.Extra.Config.Config_en_au exposing (config)
@@ -83,52 +84,38 @@ isInLast date onSaleProperty =
     List.member date <| propertyDates onSaleProperty
 
 
-view : Session -> Time -> Maybe (List OnSaleProperty) -> Model -> Html Msg
-view session currentTime maybeOnSaleProperties model =
+view : Session -> Time -> Maybe (List DateCount) -> Maybe (List OnSaleProperty) -> Model -> Html Msg
+view session currentTime maybeDateCounts maybeOnSaleProperties model =
     let
         propertiesWithLocation =
             List.filter hasLocation (Maybe.withDefault [] maybeOnSaleProperties)
 
-        onSaleProperties =
-            case model.selectedDate of
-                Just date ->
-                    newForDate propertiesWithLocation date
+        dateSelectorView =
+            case maybeDateCounts of
+                Just dateCounts ->
+                    dateSelector model.selectedDate dateCounts
 
                 Nothing ->
-                    propertiesWithLocation
-
-        sortedDates =
-            List.sortBy LocalDate.toTuple (propertyFirstDates propertiesWithLocation)
-
-        maybeLast =
-            List.head <| List.reverse sortedDates
-
-        onSalePropertiesView =
-            case maybeLast of
-                Just date ->
-                    viewOnSaleProperties model.selectedDate date onSaleProperties
-
-                Nothing ->
-                    div [] []
+                    div [] [ text "Loading dates" ]
 
         detailsView =
-            case Maybe.andThen (findProperty onSaleProperties) model.selectedId of
+            case Maybe.andThen (findProperty propertiesWithLocation) model.selectedId of
                 Just selectedProperty ->
                     propertyDetailsView selectedProperty
 
                 Nothing ->
-                    summaryView onSaleProperties model.selectedDate
+                    summaryView propertiesWithLocation model.selectedDate
     in
         div [ class "home-page" ]
             [ div [ class "container-fluid" ]
                 [ div [ class "row" ]
                     [ div [ class "col" ]
-                        [ text <| toString (List.length onSaleProperties) ++ " properties" ]
+                        [ text <| toString (List.length propertiesWithLocation) ++ " properties" ]
                     ]
                 , div [ class "row" ]
                     [ div [ class "col" ]
-                        [ dateSelector model.selectedDate sortedDates
-                        , onSalePropertiesView
+                        [ dateSelectorView
+                        , viewOnSaleProperties model.selectedDate propertiesWithLocation
                         ]
                     , div [ class "col" ]
                         [ detailsView
@@ -191,22 +178,17 @@ chartPrices datePrices =
 
 summaryView : List OnSaleProperty -> Maybe LocalDate.Date -> Html Msg
 summaryView onSaleProperties maybeSelectedDate =
-    let
-        medianPrice =
-            Maybe.map (medianPriceForDate onSaleProperties) maybeSelectedDate
-    in
-        div [ class "row" ]
-            [ div [ class "col" ]
-                [ span [] [ text <| "Total properties count: " ++ toString (List.length onSaleProperties) ]
-                , span [] [ text <| " Median price: " ++ toString (Maybe.withDefault 0 medianPrice) ]
-                ]
+    div [ class "row" ]
+        [ div [ class "col" ]
+            [ span [] [ text <| "Total properties count: " ++ toString (List.length onSaleProperties) ]
             ]
+        ]
 
 
-dateSelector : Maybe LocalDate.Date -> List LocalDate.Date -> Html Msg
-dateSelector maybeSelectedDate localDates =
+dateSelector : Maybe LocalDate.Date -> List DateCount -> Html Msg
+dateSelector maybeSelectedDate dateCounts =
     select [ on "change" (Json.map SetDate targetValueString) ]
-        (List.map (dateOption maybeSelectedDate) localDates)
+        (List.map (dateOption maybeSelectedDate) dateCounts)
 
 
 targetValueString : Json.Decoder String
@@ -214,13 +196,13 @@ targetValueString =
     Json.at [ "target", "value" ] Json.string
 
 
-dateOption : Maybe LocalDate.Date -> LocalDate.Date -> Html msg
-dateOption maybeSelectedDate localDate =
+dateOption : Maybe LocalDate.Date -> DateCount -> Html msg
+dateOption maybeSelectedDate dateCount =
     let
         isSelected =
-            Maybe.withDefault False <| Maybe.map (\selectedDate -> selectedDate == localDate) maybeSelectedDate
+            Maybe.withDefault False <| Maybe.map (\selectedDate -> selectedDate == dateCount.date) maybeSelectedDate
     in
-        option [ value (LocalDate.toISO8601 localDate), selected isSelected ] [ text (LocalDate.toISO8601 localDate) ]
+        option [ value (LocalDate.toISO8601 dateCount.date), selected isSelected ] [ text <| (LocalDate.toISO8601 dateCount.date) ++ " " ++ toString dateCount.count ]
 
 
 propertyLink : Maybe LocalDate.Date -> String -> Html msg
@@ -230,32 +212,28 @@ propertyLink maybeSelectedDate propertyId =
         ]
 
 
-viewOnSaleProperties : Maybe LocalDate.Date -> LocalDate.Date -> List OnSaleProperty -> Html msg
-viewOnSaleProperties maybeSelectedDate lastDate onSaleProperties =
+viewOnSaleProperties : Maybe LocalDate.Date -> List OnSaleProperty -> Html msg
+viewOnSaleProperties maybeSelectedDate onSaleProperties =
     div [ class "property-list-wrapper" ]
-        [ div [ class "list-group" ] (List.map (viewOnSaleProperty maybeSelectedDate lastDate) onSaleProperties)
+        [ div [ class "list-group" ] (List.map (viewOnSaleProperty maybeSelectedDate) onSaleProperties)
         ]
 
 
-viewOnSaleProperty : Maybe LocalDate.Date -> LocalDate.Date -> OnSaleProperty -> Html msg
-viewOnSaleProperty maybeSelectedDate lastDate onSaleProperty =
-    let
-        isListed =
-            isInLast lastDate onSaleProperty
-    in
-        div
-            [ class "list-group-item list-group-item-action flex-column align-items-start"
-            ]
-            [ div [ class "row" ]
-                [ div [ class "col" ]
-                    [ viewPropertyHeader onSaleProperty isListed
-                    , viewSoldDetails onSaleProperty
-                    , viewPropertyDetails onSaleProperty
-                    , viewPropertyDistances onSaleProperty
-                    , propertyLink maybeSelectedDate onSaleProperty.link
-                    ]
+viewOnSaleProperty : Maybe LocalDate.Date -> OnSaleProperty -> Html msg
+viewOnSaleProperty maybeSelectedDate onSaleProperty =
+    div
+        [ class "list-group-item list-group-item-action flex-column align-items-start"
+        ]
+        [ div [ class "row" ]
+            [ div [ class "col" ]
+                [ viewPropertyHeader onSaleProperty True
+                , viewSoldDetails onSaleProperty
+                , viewPropertyDetails onSaleProperty
+                , viewPropertyDistances onSaleProperty
+                , propertyLink maybeSelectedDate onSaleProperty.link
                 ]
             ]
+        ]
 
 
 viewNotListedBadge : Bool -> Html msg

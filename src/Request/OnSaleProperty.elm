@@ -1,43 +1,50 @@
-module Request.OnSaleProperty exposing (all, allGraphQl)
+module Request.OnSaleProperty exposing (forDateGraphQl)
 
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization, authorizationHeaders)
 import Data.OnSaleProperty as OnSaleProperty exposing (OnSaleProperty, graphQlSpec)
-import Http
-import HttpBuilder exposing (RequestBuilder, withExpect, withQueryParams)
-import Json.Decode as Decode
 import Request.Helpers exposing (apiUrl)
 import GraphQL.Request.Builder exposing (..)
 import GraphQL.Client.Http as GraphQLClient
 import Task exposing (Task)
+import Time.Date as LocalDate exposing (year, month, day)
+import GraphQL.Request.Builder.Variable as Var
+import GraphQL.Request.Builder.Arg as Arg
 
 
-all : Maybe AuthToken -> Http.Request (List OnSaleProperty)
-all maybeToken =
-    apiUrl ("/on-sale")
-        |> HttpBuilder.get
-        |> HttpBuilder.withExpect (Http.expectJson (Decode.list OnSaleProperty.decoder))
-        |> withAuthorization maybeToken
-        |> HttpBuilder.toRequest
-
-
-onSalePropertiesQuery : Request Query (List OnSaleProperty)
+onSalePropertiesQuery : Document Query (List OnSaleProperty) { vars | date : String }
 onSalePropertiesQuery =
-    extract
-        (field "onSaleProperties"
-            []
-            (list OnSaleProperty.graphQlSpec)
-        )
-        |> queryDocument
-        |> request ()
+    let
+        dateVar =
+            Var.required "date" .date Var.string
+
+        queryRoot =
+            extract
+                (field "onSalePropertiesForDate"
+                    [ ( "date", Arg.variable dateVar ) ]
+                    (list OnSaleProperty.graphQlSpec)
+                )
+    in
+        queryDocument queryRoot
 
 
-allGraphQl : Maybe AuthToken -> Task GraphQLClient.Error (List OnSaleProperty)
-allGraphQl maybeToken =
+dateToString : LocalDate.Date -> String
+dateToString date =
+    (toString <| year date) ++ "-" ++ (toString <| month date) ++ "-" ++ (toString <| day date)
+
+
+onSalePropertiesQueryRequest : LocalDate.Date -> Request Query (List OnSaleProperty)
+onSalePropertiesQueryRequest date =
+    onSalePropertiesQuery |> request { date = dateToString date }
+
+
+forDateGraphQl : LocalDate.Date -> AuthToken -> Task GraphQLClient.Error (List OnSaleProperty)
+forDateGraphQl date token =
     GraphQLClient.customSendQuery
         { method = "POST"
-        , headers = authorizationHeaders maybeToken
+        , headers = authorizationHeaders (Just token)
         , url = apiUrl "/graphql"
         , timeout = Nothing
         , withCredentials = False
         }
-        onSalePropertiesQuery
+    <|
+        onSalePropertiesQueryRequest date

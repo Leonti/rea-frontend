@@ -48,7 +48,7 @@ type alias Model =
     { session : Session
     , pageState : PageState
     , cachedOnSaleState : CachedProperties.CachedOnSaleState
-    , cachedSoldState : CachedProperties.CachedSoldState
+    , cachedDateCountsState : CachedProperties.CachedDateCountsState
     , currentRoute : Maybe Route
     , currentTime : Maybe Time
     }
@@ -62,7 +62,7 @@ init val location =
     in
         ( { pageState = Loaded initialPage
           , cachedOnSaleState = CachedProperties.initialOnSaleState
-          , cachedSoldState = CachedProperties.initialSoldState
+          , cachedDateCountsState = CachedProperties.initialDateCountsState
           , session =
                 { maybeAuthToken = Maybe.andThen .token storage
                 , maybeExpiresAt = Maybe.andThen .expiresAt storage
@@ -148,7 +148,7 @@ viewPage model isLoading page =
                     |> frame Page.Sold
 
             OnSale subModel ->
-                OnSale.view model.session (Maybe.withDefault 0.0 model.currentTime) (CachedProperties.onSale model.cachedOnSaleState) subModel
+                OnSale.view model.session (Maybe.withDefault 0.0 model.currentTime) (CachedProperties.dateCounts model.cachedDateCountsState) (CachedProperties.onSale model.cachedOnSaleState) subModel
                     |> frame Page.OnSale
                     |> Html.map OnSaleMsg
 
@@ -222,7 +222,7 @@ type Msg
     | OnSaleLoaded (Result PageLoadError OnSale.Model)
     | OnSaleMsg OnSale.Msg
     | CachedPropertiesOnSaleMsg CachedProperties.OnSaleMsg
-    | CachedPropertiesSoldMsg CachedProperties.SoldMsg
+    | CachedPropertiesDateCountsMsg CachedProperties.DateCountsMsg
     | CachedPropertiesLoaded (List OnSaleProperty)
 
 
@@ -286,39 +286,51 @@ setRoute model =
 
             Just (Route.OnSale) ->
                 let
-                    ( cachedOnSaleState, cachedPropertiesCmd ) =
-                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
+                    ( cachedDateCountsState, cachedDateCountsMsg ) =
+                        CachedProperties.initOrUpdateDateCounts model.cachedDateCountsState model.session
                 in
                     ( { model
-                        | cachedOnSaleState = cachedOnSaleState
+                        | cachedDateCountsState = cachedDateCountsState
                         , pageState = Loaded (OnSale <| OnSale.initialModel Nothing Nothing)
                       }
-                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    , Cmd.map CachedPropertiesDateCountsMsg cachedDateCountsMsg
                     )
 
             --                    transition OnSaleLoaded (OnSale.init model.session (Maybe.withDefault 0.0 model.currentTime))
             Just (Route.OnSaleForDate date) ->
                 let
-                    ( cachedOnSaleState, cachedPropertiesCmd ) =
-                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
+                    ( cachedDateCountsState, cachedDateCountsMsg ) =
+                        CachedProperties.initOrUpdateDateCounts model.cachedDateCountsState model.session
+
+                    cachedPropertiesCmd =
+                        CachedProperties.initOrUpdateOnSale model.session (Just date)
                 in
                     ( { model
-                        | cachedOnSaleState = cachedOnSaleState
+                        | cachedDateCountsState = cachedDateCountsState
                         , pageState = Loaded (OnSale <| OnSale.initialModel (Just date) Nothing)
                       }
-                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    , Cmd.batch
+                        [ Cmd.map CachedPropertiesDateCountsMsg cachedDateCountsMsg
+                        , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                        ]
                     )
 
             Just (Route.OnSaleForDateExpanded maybeDate propertyId) ->
                 let
-                    ( cachedOnSaleState, cachedPropertiesCmd ) =
-                        CachedProperties.initOrUpdateOnSale model.cachedOnSaleState model.session
+                    ( cachedDateCountsState, cachedDateCountsMsg ) =
+                        CachedProperties.initOrUpdateDateCounts model.cachedDateCountsState model.session
+
+                    cachedPropertiesCmd =
+                        CachedProperties.initOrUpdateOnSale model.session maybeDate
                 in
                     ( { model
-                        | cachedOnSaleState = cachedOnSaleState
+                        | cachedDateCountsState = cachedDateCountsState
                         , pageState = Loaded (OnSale <| OnSale.initialModel maybeDate (Just propertyId))
                       }
-                    , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                    , Cmd.batch
+                        [ Cmd.map CachedPropertiesDateCountsMsg cachedDateCountsMsg
+                        , Cmd.map CachedPropertiesOnSaleMsg cachedPropertiesCmd
+                        ]
                     )
 
 
@@ -363,13 +375,13 @@ updatePage page msg model =
             ( CurrentTime currentTime, _ ) ->
                 ( { model | currentTime = Just currentTime }, Cmd.none )
 
-            ( CachedPropertiesOnSaleMsg msg, _ ) ->
-                ( { model | cachedOnSaleState = CachedProperties.updateOnSale model.cachedOnSaleState msg }
+            ( CachedPropertiesDateCountsMsg msg, _ ) ->
+                ( { model | cachedDateCountsState = CachedProperties.updateDateCounts model.cachedDateCountsState msg }
                 , Cmd.none
                 )
 
-            ( CachedPropertiesSoldMsg msg, _ ) ->
-                ( { model | cachedSoldState = CachedProperties.updateSold model.cachedSoldState msg }
+            ( CachedPropertiesOnSaleMsg msg, _ ) ->
+                ( { model | cachedOnSaleState = CachedProperties.updateOnSale model.cachedOnSaleState msg }
                 , Cmd.none
                 )
 
